@@ -6,6 +6,7 @@ SQLite is used for local development.
 PostgreSQL is used for production.
 """
 
+import os
 import ssl
 
 from sqlalchemy.ext.asyncio import (
@@ -38,7 +39,9 @@ else:
 
     # Require valid SSL certificates for remote databases
     if "supabase" in db_url or "ssl" in db_url or "render" in db_url:
-        ssl_ctx = ssl.create_default_context()
+        ssl_ctx = ssl.create_default_context(
+            cafile=os.getenv("DB_SSL_CA_FILE") or None
+        )
         engine_kwargs["connect_args"] = {"ssl": ssl_ctx}
 
 engine = create_async_engine(
