@@ -1,0 +1,155 @@
+{
+  "categories": {
+    "Technology": {
+      "easy": [
+        {"word": "SMARTPHONE", "undercover": "TABLET", "hints": ["pocket device", "touch screen", "battery operated"]},
+        {"word": "LAPTOP", "undercover": "COMPUTER", "hints": ["portable", "keyboard", "screen"]},
+        {"word": "HEADPHONES", "undercover": "EARBUDS", "hints": ["audio", "wear on ears", "music"]},
+        {"word": "TELEVISION", "undercover": "PROJECTOR", "hints": ["living room", "watch shows", "screen"]},
+        {"word": "CAMERA", "undercover": "SMARTPHONE", "hints": ["photos", "lens", "shutter"]}
+      ],
+      "medium": [
+        {"word": "SMARTWATCH", "undercover": "FITNESS TRACKER", "hints": ["wrist", "steps", "notifications"]},
+        {"word": "DRONE", "undercover": "HELICOPTER", "hints": ["flying", "propellers", "remote control"]},
+        {"word": "VIRTUAL REALITY", "undercover": "AUGMENTED REALITY", "hints": ["headset", "immersion", "3D world"]},
+        {"word": "CONSOLE", "undercover": "GAMING PC", "hints": ["video games", "controller", "tv connected"]}
+      ],
+      "hard": [
+        {"word": "ALGORITHM", "undercover": "HEURISTIC", "hints": ["step by step", "computation", "logic"]},
+        {"word": "MICROCHIP", "undercover": "PROCESSOR", "hints": ["silicon", "tiny", "circuit"]},
+        {"word": "SATELLITE", "undercover": "SPACE STATION", "hints": ["orbit", "signals", "space"]}
+      ],
+      "expert": [
+        {"word": "QUANTUM COMPUTER", "undercover": "SUPERCOMPUTER", "hints": ["qubits", "subatomic calculation", "cryogenic"]},
+        {"word": "NEURAL NETWORK", "undercover": "DEEP LEARNING", "hints": ["synaptic weights", "artificial intelligence", "layers"]},
+        {"word": "CRYPTOGRAPHY", "undercover": "STEGANOGRAPHY", "hints": ["encryption", "hidden cipher", "mathematical secrecy"]},
+        {"word": "BLOCKCHAIN", "undercover": "DISTRIBUTED LEDGER", "hints": ["consensus", "immutable ledger", "cryptographic hash"]}
+      ]
+    },
+    "Food & Drinks": {
+      "easy": [
+        {"word": "PIZZA", "undercover": "BURGER", "hints": ["crust", "cheese", "slices"]},
+        {"word": "BURGER", "undercover": "SANDWICH", "hints": ["bun", "patty", "fast food"]},
+        {"word": "ICECREAM", "undercover": "POPSICLE", "hints": ["cold", "sweet", "summer"]},
+        {"word": "CHOCOLATE", "undercover": "BROWNIE", "hints": ["cocoa", "sweet", "bar"]},
+        {"word": "APPLE", "undercover": "PEAR", "hints": ["fruit", "red or green", "tree"]}
+      ],
+      "medium": [
+        {"word": "SUSHI", "undercover": "SASHIMI", "hints": ["rice", "raw fish", "roll"]},
+        {"word": "PANCAKES", "undercover": "WAFFLES", "hints": ["syrup", "breakfast", "batter"]},
+        {"word": "COFFEE", "undercover": "ESPRESSO", "hints": ["caffeine", "morning", "brewed"]},
+        {"word": "TACOS", "undercover": "BURRITO", "hints": ["tortilla", "mexican", "filling"]}
+      ],
+      "hard": [
+        {"word": "GUACAMOLE", "undercover": "SALSA", "hints": ["avocado", "dip", "chips"]},
+        {"word": "CROISSANT", "undercover": "BAGUETTE", "hints": ["flaky", "butter", "french bakery"]},
+        {"word": "TIRAMISU", "undercover": "CHEESECAKE", "hints": ["coffee flavored", "mascarpone", "dessert"]}
+      ],
+      "expert": [
+        {"word": "PROSCIUTTO", "undercover": "PANCETTA", "hints": ["dry-cured ham", "delicacy", "thinly sliced"]},
+        {"word": "KOMBUCHA", "undercover": "KEFIR", "hints": ["fermented probiotic", "scoby culture", "tangy effervescence"]},
+        {"word": "SAFFRON", "undercover": "TURMERIC", "hints": ["golden spice", "crocus threads", "costliest aromatic"]},
+        {"word": "CAVIAR", "undercover": "ROE", "hints": ["sturgeon pearls", "luxury garnish", "saline delicacy"]}
+      ]
+    },
+    "Animals": {
+      "easy": [
+        {"word": "DOG", "undercover": "WOLF", "hints": ["bark", "pet", "loyal"]},
+        {"word": "CAT", "undercover": "TIGER", "hints": ["purr", "whiskers", "paws"]},
+        {"word": "LION", "undercover": "TIGER", "hints": ["mane", "king of jungle", "roar"]},
+        {"word": "ELEPHANT", "undercover": "RHINO", "hints": ["trunk", "tusks", "huge ears"]},
+        {"word": "PENGUIN", "undercover": "SEAL", "hints": ["antarctica", "tuxedo", "flightless bird"]}
+      ],
+      "medium": [
+        {"word": "DOLPHIN", "undercover": "WHALE", "hints": ["ocean", "intelligent", "blowhole"]},
+        {"word": "CHEETAH", "undercover": "LEOPARD", "hints": ["fastest runner", "spots", "savannah"]},
+        {"word": "OWL", "undercover": "HAWK", "hints": ["nocturnal", "hoot", "wise eyes"]},
+        {"word": "KANGAROO", "undercover": "WALLABY", "hints": ["pouch", "hopping", "australia"]}
+      ],
+      "hard": [
+        {"word": "CHAMELEON", "undercover": "OCTOPUS", "hints": ["camouflage", "color change", "eyes"]},
+        {"word": "PLATYPUS", "undercover": "BEAVER", "hints": ["duck bill", "egg-laying mammal", "australia"]},
+        {"word": "AXOLOTL", "undercover": "SALAMANDER", "hints": ["regenerates limbs", "water monster", "cute gills"]}
+      ],
+      "expert": [
+        {"word": "NARWHAL", "undercover": "BELUGA", "hints": ["spiral tusk", "arctic waters", "unicorn of the sea"]},
+        {"word": "PANGOLIN", "undercover": "ARMADILLO", "hints": ["keratin scales", "nocturnal mammal", "defensive curl"]},
+        {"word": "OKAPI", "undercover": "GIRAFFE", "hints": ["striped flanks", "rainforest browser", "prehensile tongue"]},
+        {"word": "COELACANTH", "undercover": "LUNGFISH", "hints": ["living fossil", "lobe-finned fish", "prehistoric survival"]}
+      ]
+    },
+    "Everyday Objects": {
+      "easy": [
+        {"word": "CHAIR", "undercover": "SOFA", "hints": ["sit down", "four legs", "furniture"]},
+        {"word": "UMBRELLA", "undercover": "RAINCOAT", "hints": ["rain", "open and close", "portable shield"]},
+        {"word": "CLOCK", "undercover": "WATCH", "hints": ["ticking", "tells time", "hands and numbers"]},
+        {"word": "MIRROR", "undercover": "WINDOW", "hints": ["reflection", "glass", "vanity"]},
+        {"word": "BACKPACK", "undercover": "HANDBAG", "hints": ["straps", "school", "carries books"]}
+      ],
+      "medium": [
+        {"word": "SUNGLASSES", "undercover": "HAT", "hints": ["uv protection", "eyes", "summer"]},
+        {"word": "WALLET", "undercover": "COIN POCKET", "hints": ["money", "cards", "pocket"]},
+        {"word": "KEYBOARD", "undercover": "TYPEWRITER", "hints": ["typing", "keys", "input"]},
+        {"word": "CANDLE", "undercover": "FLASHLIGHT", "hints": ["flame", "wax", "scented"]}
+      ],
+      "hard": [
+        {"word": "HOURGLASS", "undercover": "STOPWATCH", "hints": ["sand trickling", "measurement", "antique"]},
+        {"word": "THERMOMETER", "undercover": "BAROMETER", "hints": ["temperature", "mercury", "fever"]},
+        {"word": "COMPASS", "undercover": "GPS", "hints": ["magnetic north", "navigation", "needle"]}
+      ],
+      "expert": [
+        {"word": "METRONOME", "undercover": "PENDULUM", "hints": ["audible tempo", "oscillating cadence", "musician guide"]},
+        {"word": "KALEIDOSCOPE", "undercover": "PERISCOPE", "hints": ["optical symmetry", "mirrored prisms", "colorful refraction"]},
+        {"word": "SEXTANT", "undercover": "ASTROLABE", "hints": ["celestial navigation", "angular distance", "nautical instrument"]},
+        {"word": "THERMOSTAT", "undercover": "HYGROMETER", "hints": ["ambient regulation", "bimetallic sensor", "climate control"]}
+      ]
+    },
+    "Sports & Entertainment": {
+      "easy": [
+        {"word": "FOOTBALL", "undercover": "RUGBY", "hints": ["goal", "pitch", "kick"]},
+        {"word": "BASKETBALL", "undercover": "VOLLEYBALL", "hints": ["hoop", "dribble", "orange ball"]},
+        {"word": "CINEMA", "undercover": "THEATER", "hints": ["popcorn", "big screen", "movies"]},
+        {"word": "GUITAR", "undercover": "VIOLIN", "hints": ["strings", "strumming", "music"]},
+        {"word": "SWIMMING", "undercover": "DIVING", "hints": ["pool", "goggles", "water strokes"]}
+      ],
+      "medium": [
+        {"word": "CHESS", "undercover": "CHECKERS", "hints": ["checkmate", "pawns", "strategy board"]},
+        {"word": "ROLLERCOASTER", "undercover": "FERRIS WHEEL", "hints": ["theme park", "loops", "adrenaline"]},
+        {"word": "CONCERT", "undercover": "FESTIVAL", "hints": ["live band", "crowd", "stage"]}
+      ],
+      "hard": [
+        {"word": "ARCHERY", "undercover": "DARTBOARD", "hints": ["bow and arrow", "bullseye", "quiver"]},
+        {"word": "PUPPETEERING", "undercover": "VENTRILOQUISM", "hints": ["strings", "doll", "stage illusion"]}
+      ],
+      "expert": [
+        {"word": "BIATHLON", "undercover": "TRIATHLON", "hints": ["cross-country skiing", "rifle marksmanship", "winter discipline"]},
+        {"word": "FENCING", "undercover": "KENDO", "hints": ["foil and epee", "parry and riposte", "white protective gear"]},
+        {"word": "PANTOMIME", "undercover": "CHARADES", "hints": ["silent gesture", "theatrical illusion", "unspoken story"]},
+        {"word": "ESPORTS", "undercover": "SPEEDRUNNING", "hints": ["competitive gaming", "optimal frame execution", "digital tournament"]}
+      ]
+    },
+    "Places": {
+      "easy": [
+        {"word": "AIRPORT", "undercover": "TRAIN STATION", "hints": ["planes", "runway", "terminals"]},
+        {"word": "BEACH", "undercover": "LAKE", "hints": ["sand", "waves", "sunbathing"]},
+        {"word": "HOSPITAL", "undercover": "CLINIC", "hints": ["doctors", "emergency", "medicine"]},
+        {"word": "SCHOOL", "undercover": "COLLEGE", "hints": ["teachers", "classrooms", "blackboard"]}
+      ],
+      "medium": [
+        {"word": "MUSEUM", "undercover": "ART GALLERY", "hints": ["exhibits", "history", "artifacts"]},
+        {"word": "LIBRARY", "undercover": "BOOKSTORE", "hints": ["quiet", "shelves", "reading books"]},
+        {"word": "AMUSEMENT PARK", "undercover": "WATER PARK", "hints": ["rides", "carnival", "rollercoaster"]}
+      ],
+      "hard": [
+        {"word": "LIGHTHOUSE", "undercover": "WATCHTOWER", "hints": ["beacon", "coastline", "guides ships"]},
+        {"word": "PYRAMID", "undercover": "MONUMENT", "hints": ["ancient egypt", "tomb", "stone structure"]}
+      ],
+      "expert": [
+        {"word": "FJORD", "undercover": "ARCHIPELAGO", "hints": ["glacial inlet", "steep coastal cliffs", "nordic waterway"]},
+        {"word": "OBSERVATORY", "undercover": "PLANETARIUM", "hints": ["celestial dome", "astronomical telescope", "sky observation"]},
+        {"word": "NECROPOLIS", "undercover": "CATACOMBS", "hints": ["ancient city of the dead", "monumental tombs", "antiquity cemetery"]},
+        {"word": "MAUSOLEUM", "undercover": "CENOTAPH", "hints": ["honorary sepulchre", "architectural monument", "stone memorial"]}
+      ]
+    }
+  }
+}

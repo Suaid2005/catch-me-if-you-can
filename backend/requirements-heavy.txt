@@ -1,0 +1,6 @@
+# Heavy ML requirements for high-RAM environments (>= 2GB RAM)
+# Not recommended for Render 512MB free tier
+-r requirements.txt
+torch>=2.0.0
+sentence-transformers>=2.2.0
+transformers>=4.30.0

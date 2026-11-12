@@ -1,0 +1,80 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+frontend/.next/
+frontend/out/
+
+# Python
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.venv/
+backend/venv/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/ml/models/*.pt
+backend/ml/models/*.bin
+
+# Environment
+.env
+.env.local
+.env.production
+backend/.env
+frontend/.env.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Testing
+coverage/
+.pytest_cache/
+htmlcov/
+
+# Build
+dist/
+build/
+
+
+# Protect all environment files (allow safe example templates)
+.env*
+!.env.example
+**/.env*
+!**/.env.example
+
+# Local databases and credentials
+*.db
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# Python virtual environments
+.venv/
+venv/
+
+# Temporary development material
+scratch/
+
+# Local database files
+backend/catchme.db
+
+# Next.js build output
+.next/
+**/.next/
+
+# Dependencies
+**/node_modules/
