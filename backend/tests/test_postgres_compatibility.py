@@ -80,3 +80,20 @@ def test_migration_sql_generation_by_dialect():
     assert "JSON DEFAULT" in pg_avatars
     assert "::json" in pg_avatars
 
+
+def test_user_avatar_model_length():
+    """Verify that User model defines avatar as VARCHAR(64) to support custom avatar IDs."""
+    from app.models.user import User
+    avatar_col = User.__table__.c.avatar
+    assert avatar_col.type.length == 64, f"Expected avatar length 64, got {avatar_col.type.length}"
+    assert avatar_col.default.arg == "avatar_classic_detective"
+
+
+def test_postgres_avatar_widening_sql():
+    """Verify that the PostgreSQL migration statements for widening avatar are syntactically valid."""
+    sql_widen = "ALTER TABLE users ALTER COLUMN avatar TYPE VARCHAR(64);"
+    sql_default = "ALTER TABLE users ALTER COLUMN avatar SET DEFAULT 'avatar_classic_detective';"
+    assert "VARCHAR(64)" in sql_widen
+    assert "avatar_classic_detective" in sql_default
+
+

@@ -103,7 +103,19 @@ async def init_db() -> None:
                 bool_false_default = "BOOLEAN DEFAULT FALSE" if dialect_name == "postgresql" else "BOOLEAN DEFAULT 0"
                 bool_true_default = "BOOLEAN DEFAULT TRUE" if dialect_name == "postgresql" else "BOOLEAN DEFAULT 1"
 
+                # In commit b79665d, avatar was VARCHAR(10). Avatar identifiers can be up to 64 chars.
+                # Widen avatar to VARCHAR(64) on PostgreSQL idempotently without altering existing values.
+                if dialect_name == "postgresql" and "avatar" in existing_cols:
+                    try:
+                        sync_conn.execute(text("ALTER TABLE users ALTER COLUMN avatar TYPE VARCHAR(64);"))
+                        sync_conn.execute(text("ALTER TABLE users ALTER COLUMN avatar SET DEFAULT 'avatar_classic_detective';"))
+                    except Exception as e:
+                        err_msg = str(e).lower()
+                        if "does not exist" not in err_msg:
+                            raise
+
                 columns_to_ensure = [
+                    ("avatar", "VARCHAR(64) DEFAULT 'avatar_classic_detective'"),
                     ("phone_number", "VARCHAR(32)"),
                     ("coins", "INTEGER DEFAULT 150"),
                     ("xp", "INTEGER DEFAULT 0"),
