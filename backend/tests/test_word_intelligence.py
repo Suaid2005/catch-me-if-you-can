@@ -25,9 +25,9 @@ def test_select_word_pair():
     assert len(pair["word"]) > 1
 
 def test_semantic_similarity():
-    sim_close = word_intelligence.compute_similarity("smartphone", "mobile phone")
+    sim_close = word_intelligence.compute_similarity("smartphone", "phone")
     sim_far = word_intelligence.compute_similarity("smartphone", "elephant")
-    print(f"Similarity (smartphone vs mobile phone): {sim_close}")
+    print(f"Similarity (smartphone vs phone): {sim_close}")
     print(f"Similarity (smartphone vs elephant): {sim_far}")
     assert sim_close > sim_far
 

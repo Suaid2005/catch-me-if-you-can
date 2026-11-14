@@ -19,7 +19,8 @@ class Settings(BaseSettings):
     app_name: str = "CatchMeIfYouCan"
     app_env: str = "development"
     secret_key: str = "CHANGE_ME"
-    access_token_expire_minutes: int = 60
+    access_token_expire_minutes: int = 15  # Short-lived (15 minutes) access tokens for security
+    refresh_token_expire_days: int = 30    # Long-lived (30 days) revocable refresh tokens
 
     # Server Port (Render injects PORT)
     port: int = 8000
@@ -32,6 +33,21 @@ class Settings(BaseSettings):
 
     # Optional explicit frontend domain (e.g. https://my-catchme.vercel.app)
     frontend_url: str = ""
+    app_base_url: str = "http://localhost:3000"
+
+    # Email notification provider settings (Resend API or SMTP)
+    resend_api_key: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@catchme.game"
+    smtp_use_tls: bool = True
+
+    # SMS notification provider settings (Twilio or compatible)
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_from_number: str = ""
 
     # CORS — comma-separated list of allowed origins
     allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000"
@@ -66,7 +82,7 @@ class Settings(BaseSettings):
 
     @property
     def is_development(self) -> bool:
-        return self.app_env == "development"
+        return self.app_env in ("development", "testing", "test", "dev")
 
 
 @lru_cache

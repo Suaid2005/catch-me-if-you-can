@@ -16,8 +16,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import socketio
 
 from app.config import get_settings
-from app.database import init_db
-from app.api import auth, rooms, players
+from app.database import init_db, close_db
+from app.api import auth, rooms, players, progression
 from app.socket.server import sio
 
 settings = get_settings()
@@ -34,6 +34,12 @@ async def lifespan(app: FastAPI):
     print("✅ Database tables ready")
     yield
     print("👋 Server shutting down")
+    try:
+        from app.socket.game_events import cancel_all_game_timers
+        cancel_all_game_timers()
+    except Exception as e:
+        print(f"Warning: error cancelling game timers on shutdown: {e}")
+    await close_db()
 
 
 # Create the FastAPI application
@@ -56,9 +62,10 @@ app.add_middleware(
 )
 
 # Register REST API routers — each file handles a group of related endpoints
-app.include_router(auth.router,    prefix="/api/auth",    tags=["Authentication"])
-app.include_router(rooms.router,   prefix="/api/rooms",   tags=["Rooms"])
-app.include_router(players.router, prefix="/api/players", tags=["Players"])
+app.include_router(auth.router,        prefix="/api/auth",        tags=["Authentication"])
+app.include_router(rooms.router,       prefix="/api/rooms",       tags=["Rooms"])
+app.include_router(players.router,     prefix="/api/players",     tags=["Players"])
+app.include_router(progression.router, prefix="/api/progression", tags=["Progression"])
 
 
 @app.get("/", tags=["Health"])

@@ -1,155 +1,919 @@
 {
-  "categories": {
-    "Technology": {
-      "easy": [
-        {"word": "SMARTPHONE", "undercover": "TABLET", "hints": ["pocket device", "touch screen", "battery operated"]},
-        {"word": "LAPTOP", "undercover": "COMPUTER", "hints": ["portable", "keyboard", "screen"]},
-        {"word": "HEADPHONES", "undercover": "EARBUDS", "hints": ["audio", "wear on ears", "music"]},
-        {"word": "TELEVISION", "undercover": "PROJECTOR", "hints": ["living room", "watch shows", "screen"]},
-        {"word": "CAMERA", "undercover": "SMARTPHONE", "hints": ["photos", "lens", "shutter"]}
-      ],
-      "medium": [
-        {"word": "SMARTWATCH", "undercover": "FITNESS TRACKER", "hints": ["wrist", "steps", "notifications"]},
-        {"word": "DRONE", "undercover": "HELICOPTER", "hints": ["flying", "propellers", "remote control"]},
-        {"word": "VIRTUAL REALITY", "undercover": "AUGMENTED REALITY", "hints": ["headset", "immersion", "3D world"]},
-        {"word": "CONSOLE", "undercover": "GAMING PC", "hints": ["video games", "controller", "tv connected"]}
-      ],
-      "hard": [
-        {"word": "ALGORITHM", "undercover": "HEURISTIC", "hints": ["step by step", "computation", "logic"]},
-        {"word": "MICROCHIP", "undercover": "PROCESSOR", "hints": ["silicon", "tiny", "circuit"]},
-        {"word": "SATELLITE", "undercover": "SPACE STATION", "hints": ["orbit", "signals", "space"]}
-      ],
-      "expert": [
-        {"word": "QUANTUM COMPUTER", "undercover": "SUPERCOMPUTER", "hints": ["qubits", "subatomic calculation", "cryogenic"]},
-        {"word": "NEURAL NETWORK", "undercover": "DEEP LEARNING", "hints": ["synaptic weights", "artificial intelligence", "layers"]},
-        {"word": "CRYPTOGRAPHY", "undercover": "STEGANOGRAPHY", "hints": ["encryption", "hidden cipher", "mathematical secrecy"]},
-        {"word": "BLOCKCHAIN", "undercover": "DISTRIBUTED LEDGER", "hints": ["consensus", "immutable ledger", "cryptographic hash"]}
-      ]
-    },
-    "Food & Drinks": {
-      "easy": [
-        {"word": "PIZZA", "undercover": "BURGER", "hints": ["crust", "cheese", "slices"]},
-        {"word": "BURGER", "undercover": "SANDWICH", "hints": ["bun", "patty", "fast food"]},
-        {"word": "ICECREAM", "undercover": "POPSICLE", "hints": ["cold", "sweet", "summer"]},
-        {"word": "CHOCOLATE", "undercover": "BROWNIE", "hints": ["cocoa", "sweet", "bar"]},
-        {"word": "APPLE", "undercover": "PEAR", "hints": ["fruit", "red or green", "tree"]}
-      ],
-      "medium": [
-        {"word": "SUSHI", "undercover": "SASHIMI", "hints": ["rice", "raw fish", "roll"]},
-        {"word": "PANCAKES", "undercover": "WAFFLES", "hints": ["syrup", "breakfast", "batter"]},
-        {"word": "COFFEE", "undercover": "ESPRESSO", "hints": ["caffeine", "morning", "brewed"]},
-        {"word": "TACOS", "undercover": "BURRITO", "hints": ["tortilla", "mexican", "filling"]}
-      ],
-      "hard": [
-        {"word": "GUACAMOLE", "undercover": "SALSA", "hints": ["avocado", "dip", "chips"]},
-        {"word": "CROISSANT", "undercover": "BAGUETTE", "hints": ["flaky", "butter", "french bakery"]},
-        {"word": "TIRAMISU", "undercover": "CHEESECAKE", "hints": ["coffee flavored", "mascarpone", "dessert"]}
-      ],
-      "expert": [
-        {"word": "PROSCIUTTO", "undercover": "PANCETTA", "hints": ["dry-cured ham", "delicacy", "thinly sliced"]},
-        {"word": "KOMBUCHA", "undercover": "KEFIR", "hints": ["fermented probiotic", "scoby culture", "tangy effervescence"]},
-        {"word": "SAFFRON", "undercover": "TURMERIC", "hints": ["golden spice", "crocus threads", "costliest aromatic"]},
-        {"word": "CAVIAR", "undercover": "ROE", "hints": ["sturgeon pearls", "luxury garnish", "saline delicacy"]}
-      ]
-    },
-    "Animals": {
-      "easy": [
-        {"word": "DOG", "undercover": "WOLF", "hints": ["bark", "pet", "loyal"]},
-        {"word": "CAT", "undercover": "TIGER", "hints": ["purr", "whiskers", "paws"]},
-        {"word": "LION", "undercover": "TIGER", "hints": ["mane", "king of jungle", "roar"]},
-        {"word": "ELEPHANT", "undercover": "RHINO", "hints": ["trunk", "tusks", "huge ears"]},
-        {"word": "PENGUIN", "undercover": "SEAL", "hints": ["antarctica", "tuxedo", "flightless bird"]}
-      ],
-      "medium": [
-        {"word": "DOLPHIN", "undercover": "WHALE", "hints": ["ocean", "intelligent", "blowhole"]},
-        {"word": "CHEETAH", "undercover": "LEOPARD", "hints": ["fastest runner", "spots", "savannah"]},
-        {"word": "OWL", "undercover": "HAWK", "hints": ["nocturnal", "hoot", "wise eyes"]},
-        {"word": "KANGAROO", "undercover": "WALLABY", "hints": ["pouch", "hopping", "australia"]}
-      ],
-      "hard": [
-        {"word": "CHAMELEON", "undercover": "OCTOPUS", "hints": ["camouflage", "color change", "eyes"]},
-        {"word": "PLATYPUS", "undercover": "BEAVER", "hints": ["duck bill", "egg-laying mammal", "australia"]},
-        {"word": "AXOLOTL", "undercover": "SALAMANDER", "hints": ["regenerates limbs", "water monster", "cute gills"]}
-      ],
-      "expert": [
-        {"word": "NARWHAL", "undercover": "BELUGA", "hints": ["spiral tusk", "arctic waters", "unicorn of the sea"]},
-        {"word": "PANGOLIN", "undercover": "ARMADILLO", "hints": ["keratin scales", "nocturnal mammal", "defensive curl"]},
-        {"word": "OKAPI", "undercover": "GIRAFFE", "hints": ["striped flanks", "rainforest browser", "prehensile tongue"]},
-        {"word": "COELACANTH", "undercover": "LUNGFISH", "hints": ["living fossil", "lobe-finned fish", "prehistoric survival"]}
-      ]
-    },
-    "Everyday Objects": {
-      "easy": [
-        {"word": "CHAIR", "undercover": "SOFA", "hints": ["sit down", "four legs", "furniture"]},
-        {"word": "UMBRELLA", "undercover": "RAINCOAT", "hints": ["rain", "open and close", "portable shield"]},
-        {"word": "CLOCK", "undercover": "WATCH", "hints": ["ticking", "tells time", "hands and numbers"]},
-        {"word": "MIRROR", "undercover": "WINDOW", "hints": ["reflection", "glass", "vanity"]},
-        {"word": "BACKPACK", "undercover": "HANDBAG", "hints": ["straps", "school", "carries books"]}
-      ],
-      "medium": [
-        {"word": "SUNGLASSES", "undercover": "HAT", "hints": ["uv protection", "eyes", "summer"]},
-        {"word": "WALLET", "undercover": "COIN POCKET", "hints": ["money", "cards", "pocket"]},
-        {"word": "KEYBOARD", "undercover": "TYPEWRITER", "hints": ["typing", "keys", "input"]},
-        {"word": "CANDLE", "undercover": "FLASHLIGHT", "hints": ["flame", "wax", "scented"]}
-      ],
-      "hard": [
-        {"word": "HOURGLASS", "undercover": "STOPWATCH", "hints": ["sand trickling", "measurement", "antique"]},
-        {"word": "THERMOMETER", "undercover": "BAROMETER", "hints": ["temperature", "mercury", "fever"]},
-        {"word": "COMPASS", "undercover": "GPS", "hints": ["magnetic north", "navigation", "needle"]}
-      ],
-      "expert": [
-        {"word": "METRONOME", "undercover": "PENDULUM", "hints": ["audible tempo", "oscillating cadence", "musician guide"]},
-        {"word": "KALEIDOSCOPE", "undercover": "PERISCOPE", "hints": ["optical symmetry", "mirrored prisms", "colorful refraction"]},
-        {"word": "SEXTANT", "undercover": "ASTROLABE", "hints": ["celestial navigation", "angular distance", "nautical instrument"]},
-        {"word": "THERMOSTAT", "undercover": "HYGROMETER", "hints": ["ambient regulation", "bimetallic sensor", "climate control"]}
-      ]
-    },
-    "Sports & Entertainment": {
-      "easy": [
-        {"word": "FOOTBALL", "undercover": "RUGBY", "hints": ["goal", "pitch", "kick"]},
-        {"word": "BASKETBALL", "undercover": "VOLLEYBALL", "hints": ["hoop", "dribble", "orange ball"]},
-        {"word": "CINEMA", "undercover": "THEATER", "hints": ["popcorn", "big screen", "movies"]},
-        {"word": "GUITAR", "undercover": "VIOLIN", "hints": ["strings", "strumming", "music"]},
-        {"word": "SWIMMING", "undercover": "DIVING", "hints": ["pool", "goggles", "water strokes"]}
-      ],
-      "medium": [
-        {"word": "CHESS", "undercover": "CHECKERS", "hints": ["checkmate", "pawns", "strategy board"]},
-        {"word": "ROLLERCOASTER", "undercover": "FERRIS WHEEL", "hints": ["theme park", "loops", "adrenaline"]},
-        {"word": "CONCERT", "undercover": "FESTIVAL", "hints": ["live band", "crowd", "stage"]}
-      ],
-      "hard": [
-        {"word": "ARCHERY", "undercover": "DARTBOARD", "hints": ["bow and arrow", "bullseye", "quiver"]},
-        {"word": "PUPPETEERING", "undercover": "VENTRILOQUISM", "hints": ["strings", "doll", "stage illusion"]}
-      ],
-      "expert": [
-        {"word": "BIATHLON", "undercover": "TRIATHLON", "hints": ["cross-country skiing", "rifle marksmanship", "winter discipline"]},
-        {"word": "FENCING", "undercover": "KENDO", "hints": ["foil and epee", "parry and riposte", "white protective gear"]},
-        {"word": "PANTOMIME", "undercover": "CHARADES", "hints": ["silent gesture", "theatrical illusion", "unspoken story"]},
-        {"word": "ESPORTS", "undercover": "SPEEDRUNNING", "hints": ["competitive gaming", "optimal frame execution", "digital tournament"]}
-      ]
-    },
-    "Places": {
-      "easy": [
-        {"word": "AIRPORT", "undercover": "TRAIN STATION", "hints": ["planes", "runway", "terminals"]},
-        {"word": "BEACH", "undercover": "LAKE", "hints": ["sand", "waves", "sunbathing"]},
-        {"word": "HOSPITAL", "undercover": "CLINIC", "hints": ["doctors", "emergency", "medicine"]},
-        {"word": "SCHOOL", "undercover": "COLLEGE", "hints": ["teachers", "classrooms", "blackboard"]}
-      ],
-      "medium": [
-        {"word": "MUSEUM", "undercover": "ART GALLERY", "hints": ["exhibits", "history", "artifacts"]},
-        {"word": "LIBRARY", "undercover": "BOOKSTORE", "hints": ["quiet", "shelves", "reading books"]},
-        {"word": "AMUSEMENT PARK", "undercover": "WATER PARK", "hints": ["rides", "carnival", "rollercoaster"]}
-      ],
-      "hard": [
-        {"word": "LIGHTHOUSE", "undercover": "WATCHTOWER", "hints": ["beacon", "coastline", "guides ships"]},
-        {"word": "PYRAMID", "undercover": "MONUMENT", "hints": ["ancient egypt", "tomb", "stone structure"]}
-      ],
-      "expert": [
-        {"word": "FJORD", "undercover": "ARCHIPELAGO", "hints": ["glacial inlet", "steep coastal cliffs", "nordic waterway"]},
-        {"word": "OBSERVATORY", "undercover": "PLANETARIUM", "hints": ["celestial dome", "astronomical telescope", "sky observation"]},
-        {"word": "NECROPOLIS", "undercover": "CATACOMBS", "hints": ["ancient city of the dead", "monumental tombs", "antiquity cemetery"]},
-        {"word": "MAUSOLEUM", "undercover": "CENOTAPH", "hints": ["honorary sepulchre", "architectural monument", "stone memorial"]}
-      ]
+    "categories": {
+        "Technology": {
+            "easy": [
+                {
+                    "word": "SMARTPHONE",
+                    "undercover": "TABLET",
+                    "hints": [
+                        "pocket device",
+                        "touch screen",
+                        "battery operated"
+                    ]
+                },
+                {
+                    "word": "LAPTOP",
+                    "undercover": "COMPUTER",
+                    "hints": [
+                        "portable",
+                        "keyboard",
+                        "screen"
+                    ]
+                },
+                {
+                    "word": "TELEVISION",
+                    "undercover": "MONITOR",
+                    "hints": [
+                        "screen",
+                        "living room",
+                        "remote control"
+                    ]
+                },
+                {
+                    "word": "HEADPHONES",
+                    "undercover": "EARBUDS",
+                    "hints": [
+                        "music",
+                        "ears",
+                        "sound"
+                    ]
+                },
+                {
+                    "word": "CAMERA",
+                    "undercover": "VIDEO CAMERA",
+                    "hints": [
+                        "photos",
+                        "lens",
+                        "memories"
+                    ]
+                }
+            ],
+            "medium": [
+                {
+                    "word": "SMARTWATCH",
+                    "undercover": "FITNESS TRACKER",
+                    "hints": [
+                        "wrist device",
+                        "steps",
+                        "notifications"
+                    ]
+                },
+                {
+                    "word": "PRINTER",
+                    "undercover": "SCANNER",
+                    "hints": [
+                        "paper",
+                        "ink",
+                        "office device"
+                    ]
+                },
+                {
+                    "word": "ROUTER",
+                    "undercover": "MODEM",
+                    "hints": [
+                        "wifi",
+                        "internet connection",
+                        "flashing lights"
+                    ]
+                },
+                {
+                    "word": "MICROPHONE",
+                    "undercover": "SPEAKER",
+                    "hints": [
+                        "voice",
+                        "recording",
+                        "audio input"
+                    ]
+                }
+            ],
+            "hard": [
+                {
+                    "word": "DRONE",
+                    "undercover": "HELICOPTER",
+                    "hints": [
+                        "remote control",
+                        "flying camera",
+                        "propellers"
+                    ]
+                },
+                {
+                    "word": "PROJECTOR",
+                    "undercover": "DISPLAY",
+                    "hints": [
+                        "wall beam",
+                        "movie theater",
+                        "lens"
+                    ]
+                },
+                {
+                    "word": "POWER BANK",
+                    "undercover": "BATTERY",
+                    "hints": [
+                        "portable charge",
+                        "usb cable",
+                        "backup power"
+                    ]
+                }
+            ],
+            "expert": [
+                {
+                    "word": "SATELLITE",
+                    "undercover": "TELESCOPE",
+                    "hints": [
+                        "orbiting earth",
+                        "space antenna",
+                        "signals"
+                    ]
+                },
+                {
+                    "word": "SOLAR PANEL",
+                    "undercover": "WIND TURBINE",
+                    "hints": [
+                        "clean energy",
+                        "sunlight absorber",
+                        "rooftop grid"
+                    ]
+                },
+                {
+                    "word": "ELECTRIC CAR",
+                    "undercover": "HYBRID CAR",
+                    "hints": [
+                        "battery motor",
+                        "charging plug",
+                        "zero emissions"
+                    ]
+                },
+                {
+                    "word": "3D PRINTER",
+                    "undercover": "LASER CUTTER",
+                    "hints": [
+                        "filament layers",
+                        "digital prototype",
+                        "manufacturing"
+                    ]
+                }
+            ]
+        },
+        "Food & Drinks": {
+            "easy": [
+                {
+                    "word": "PIZZA",
+                    "undercover": "BURGER",
+                    "hints": [
+                        "crust",
+                        "cheese",
+                        "slices"
+                    ]
+                },
+                {
+                    "word": "BURGER",
+                    "undercover": "SANDWICH",
+                    "hints": [
+                        "bun",
+                        "patty",
+                        "fast food"
+                    ]
+                },
+                {
+                    "word": "APPLE",
+                    "undercover": "ORANGE",
+                    "hints": [
+                        "round fruit",
+                        "crisp bite",
+                        "orchard"
+                    ]
+                },
+                {
+                    "word": "ICE CREAM",
+                    "undercover": "FROZEN YOGURT",
+                    "hints": [
+                        "cold treat",
+                        "cone or bowl",
+                        "sweet scoop"
+                    ]
+                },
+                {
+                    "word": "COOKIE",
+                    "undercover": "BROWNIE",
+                    "hints": [
+                        "baked snack",
+                        "sweet bite",
+                        "chocolate chips"
+                    ]
+                }
+            ],
+            "medium": [
+                {
+                    "word": "PANCAKE",
+                    "undercover": "WAFFLE",
+                    "hints": [
+                        "breakfast griddle",
+                        "syrup",
+                        "golden brown"
+                    ]
+                },
+                {
+                    "word": "PASTA",
+                    "undercover": "NOODLES",
+                    "hints": [
+                        "boiled dough",
+                        "sauce",
+                        "italian classic"
+                    ]
+                },
+                {
+                    "word": "LEMONADE",
+                    "undercover": "ORANGE JUICE",
+                    "hints": [
+                        "citrus drink",
+                        "sweet and sour",
+                        "ice cubes"
+                    ]
+                },
+                {
+                    "word": "POPCORN",
+                    "undercover": "POTATO CHIPS",
+                    "hints": [
+                        "movie snack",
+                        "crunchy",
+                        "melted butter"
+                    ]
+                }
+            ],
+            "hard": [
+                {
+                    "word": "SMOOTHIE",
+                    "undercover": "MILKSHAKE",
+                    "hints": [
+                        "blended fruit",
+                        "thick straw",
+                        "refreshing drink"
+                    ]
+                },
+                {
+                    "word": "CHEESECAKE",
+                    "undercover": "APPLE PIE",
+                    "hints": [
+                        "graham crust",
+                        "creamy filling",
+                        "dessert slice"
+                    ]
+                },
+                {
+                    "word": "HOT CHOCOLATE",
+                    "undercover": "COFFEE",
+                    "hints": [
+                        "warm mug",
+                        "marshmallows",
+                        "cocoa beans"
+                    ]
+                }
+            ],
+            "expert": [
+                {
+                    "word": "ESPRESSO",
+                    "undercover": "CAPPUCCINO",
+                    "hints": [
+                        "concentrated roast",
+                        "crema layer",
+                        "small cup"
+                    ]
+                },
+                {
+                    "word": "LASAGNA",
+                    "undercover": "CASSEROLE",
+                    "hints": [
+                        "layered pasta",
+                        "ricotta cheese",
+                        "baked marinara"
+                    ]
+                },
+                {
+                    "word": "FONDUE",
+                    "undercover": "DIP",
+                    "hints": [
+                        "melted pot",
+                        "skewers",
+                        "communal bowl"
+                    ]
+                },
+                {
+                    "word": "CROISSANT",
+                    "undercover": "BAGEL",
+                    "hints": [
+                        "crescent shape",
+                        "buttery layers",
+                        "bakery breakfast"
+                    ]
+                }
+            ]
+        },
+        "Animals": {
+            "easy": [
+                {
+                    "word": "DOG",
+                    "undercover": "CAT",
+                    "hints": [
+                        "pet",
+                        "four legs",
+                        "friendly"
+                    ]
+                },
+                {
+                    "word": "LION",
+                    "undercover": "TIGER",
+                    "hints": [
+                        "big cat",
+                        "wild predator",
+                        "savannah king"
+                    ]
+                },
+                {
+                    "word": "DOLPHIN",
+                    "undercover": "WHALE",
+                    "hints": [
+                        "ocean swimmer",
+                        "blowhole",
+                        "marine mammal"
+                    ]
+                },
+                {
+                    "word": "ELEPHANT",
+                    "undercover": "RHINOCEROS",
+                    "hints": [
+                        "huge mammal",
+                        "trunk",
+                        "grey tusks"
+                    ]
+                },
+                {
+                    "word": "PENGUIN",
+                    "undercover": "DUCK",
+                    "hints": [
+                        "flightless bird",
+                        "black and white",
+                        "swimming"
+                    ]
+                }
+            ],
+            "medium": [
+                {
+                    "word": "KANGAROO",
+                    "undercover": "RABBIT",
+                    "hints": [
+                        "hopping",
+                        "pouch",
+                        "strong back legs"
+                    ]
+                },
+                {
+                    "word": "GIRAFFE",
+                    "undercover": "ZEBRA",
+                    "hints": [
+                        "tall neck",
+                        "spots",
+                        "treetop leaves"
+                    ]
+                },
+                {
+                    "word": "BEAR",
+                    "undercover": "WOLF",
+                    "hints": [
+                        "furry",
+                        "forest dweller",
+                        "sharp claws"
+                    ]
+                },
+                {
+                    "word": "HORSE",
+                    "undercover": "DONKEY",
+                    "hints": [
+                        "hooves",
+                        "mane",
+                        "riding animal"
+                    ]
+                }
+            ],
+            "hard": [
+                {
+                    "word": "CHAMELEON",
+                    "undercover": "OCTOPUS",
+                    "hints": [
+                        "color changer",
+                        "camouflage",
+                        "reptile"
+                    ]
+                },
+                {
+                    "word": "OTTER",
+                    "undercover": "BEAVER",
+                    "hints": [
+                        "river swimmer",
+                        "playful",
+                        "sleek fur"
+                    ]
+                },
+                {
+                    "word": "KOALA",
+                    "undercover": "PANDA",
+                    "hints": [
+                        "eucalyptus leaves",
+                        "tree climber",
+                        "fuzzy ears"
+                    ]
+                }
+            ],
+            "expert": [
+                {
+                    "word": "CHEETAH",
+                    "undercover": "LEOPARD",
+                    "hints": [
+                        "fastest runner",
+                        "spotted coat",
+                        "tear marks"
+                    ]
+                },
+                {
+                    "word": "FALCON",
+                    "undercover": "EAGLE",
+                    "hints": [
+                        "high speed dive",
+                        "raptor bird",
+                        "keen eyesight"
+                    ]
+                },
+                {
+                    "word": "WALRUS",
+                    "undercover": "SEAL",
+                    "hints": [
+                        "arctic blubber",
+                        "long tusks",
+                        "flippers"
+                    ]
+                },
+                {
+                    "word": "FLAMINGO",
+                    "undercover": "SWAN",
+                    "hints": [
+                        "pink feathers",
+                        "one leg stance",
+                        "wading bird"
+                    ]
+                }
+            ]
+        },
+        "Everyday Objects": {
+            "easy": [
+                {
+                    "word": "CHAIR",
+                    "undercover": "SOFA",
+                    "hints": [
+                        "sitting down",
+                        "furniture",
+                        "four legs"
+                    ]
+                },
+                {
+                    "word": "UMBRELLA",
+                    "undercover": "RAINCOAT",
+                    "hints": [
+                        "rain protection",
+                        "foldable",
+                        "canopy"
+                    ]
+                },
+                {
+                    "word": "BACKPACK",
+                    "undercover": "HANDBAG",
+                    "hints": [
+                        "school or travel",
+                        "zippers",
+                        "shoulder straps"
+                    ]
+                },
+                {
+                    "word": "CLOCK",
+                    "undercover": "WATCH",
+                    "hints": [
+                        "ticking time",
+                        "numbers",
+                        "wall or wrist"
+                    ]
+                },
+                {
+                    "word": "MIRROR",
+                    "undercover": "WINDOW",
+                    "hints": [
+                        "reflection",
+                        "glass",
+                        "grooming"
+                    ]
+                }
+            ],
+            "medium": [
+                {
+                    "word": "SUNGLASSES",
+                    "undercover": "READING GLASSES",
+                    "hints": [
+                        "tinted lenses",
+                        "sun shielding",
+                        "frames"
+                    ]
+                },
+                {
+                    "word": "SCISSORS",
+                    "undercover": "KNIFE",
+                    "hints": [
+                        "cutting tool",
+                        "two blades",
+                        "finger loops"
+                    ]
+                },
+                {
+                    "word": "FLASHLIGHT",
+                    "undercover": "CANDLE",
+                    "hints": [
+                        "portable light",
+                        "beam in the dark",
+                        "battery switch"
+                    ]
+                },
+                {
+                    "word": "PILLOW",
+                    "undercover": "CUSHION",
+                    "hints": [
+                        "soft sleeping",
+                        "bedding",
+                        "feathers or foam"
+                    ]
+                }
+            ],
+            "hard": [
+                {
+                    "word": "THERMOMETER",
+                    "undercover": "BAROMETER",
+                    "hints": [
+                        "temperature measure",
+                        "degrees",
+                        "health gauge"
+                    ]
+                },
+                {
+                    "word": "COMPASS",
+                    "undercover": "MAP",
+                    "hints": [
+                        "magnetic needle",
+                        "pointing north",
+                        "direction navigation"
+                    ]
+                },
+                {
+                    "word": "PADLOCK",
+                    "undercover": "KEYCHAIN",
+                    "hints": [
+                        "metal shackle",
+                        "combination or key",
+                        "locking safe"
+                    ]
+                }
+            ],
+            "expert": [
+                {
+                    "word": "BINOCULARS",
+                    "undercover": "MICROSCOPE",
+                    "hints": [
+                        "dual lenses",
+                        "distant viewing",
+                        "strap around neck"
+                    ]
+                },
+                {
+                    "word": "HOURGLASS",
+                    "undercover": "STOPWATCH",
+                    "hints": [
+                        "trickling sand",
+                        "time passage",
+                        "glass bulb"
+                    ]
+                },
+                {
+                    "word": "GLOBE",
+                    "undercover": "ATLAS",
+                    "hints": [
+                        "spinning sphere",
+                        "continents and oceans",
+                        "world map"
+                    ]
+                },
+                {
+                    "word": "TELESCOPE",
+                    "undercover": "PERISCOPE",
+                    "hints": [
+                        "stargazing",
+                        "long tube",
+                        "celestial lens"
+                    ]
+                }
+            ]
+        },
+        "Sports & Entertainment": {
+            "easy": [
+                {
+                    "word": "FOOTBALL",
+                    "undercover": "RUGBY",
+                    "hints": [
+                        "pitch",
+                        "goal post",
+                        "kicking ball"
+                    ]
+                },
+                {
+                    "word": "BASKETBALL",
+                    "undercover": "VOLLEYBALL",
+                    "hints": [
+                        "hoop net",
+                        "dribbling",
+                        "court"
+                    ]
+                },
+                {
+                    "word": "GUITAR",
+                    "undercover": "UKULELE",
+                    "hints": [
+                        "strings",
+                        "strumming",
+                        "wooden acoustic"
+                    ]
+                },
+                {
+                    "word": "PIANO",
+                    "undercover": "KEYBOARD",
+                    "hints": [
+                        "black and white keys",
+                        "grand instrument",
+                        "pedals"
+                    ]
+                },
+                {
+                    "word": "TENNIS",
+                    "undercover": "BADMINTON",
+                    "hints": [
+                        "racket",
+                        "net",
+                        "yellow ball"
+                    ]
+                }
+            ],
+            "medium": [
+                {
+                    "word": "SWIMMING",
+                    "undercover": "DIVING",
+                    "hints": [
+                        "pool lanes",
+                        "strokes",
+                        "goggles"
+                    ]
+                },
+                {
+                    "word": "BOWLING",
+                    "undercover": "BILLIARDS",
+                    "hints": [
+                        "heavy ball",
+                        "ten pins",
+                        "polished lane"
+                    ]
+                },
+                {
+                    "word": "SKATEBOARD",
+                    "undercover": "ROLLERBLADES",
+                    "hints": [
+                        "four small wheels",
+                        "wooden deck",
+                        "ramps"
+                    ]
+                },
+                {
+                    "word": "CHESS",
+                    "undercover": "CHECKERS",
+                    "hints": [
+                        "kings and queens",
+                        "checkmate",
+                        "grid board"
+                    ]
+                }
+            ],
+            "hard": [
+                {
+                    "word": "ARCHERY",
+                    "undercover": "DARTBOARD",
+                    "hints": [
+                        "bow string",
+                        "bullseye",
+                        "quiver arrows"
+                    ]
+                },
+                {
+                    "word": "MARATHON",
+                    "undercover": "SPRINT",
+                    "hints": [
+                        "long distance run",
+                        "finish line banner",
+                        "endurance"
+                    ]
+                },
+                {
+                    "word": "BASEBALL",
+                    "undercover": "CRICKET",
+                    "hints": [
+                        "wooden bat",
+                        "diamond field",
+                        "home run"
+                    ]
+                }
+            ],
+            "expert": [
+                {
+                    "word": "SNOWBOARDING",
+                    "undercover": "SKIING",
+                    "hints": [
+                        "single board",
+                        "snow slopes",
+                        "bindings"
+                    ]
+                },
+                {
+                    "word": "SURFING",
+                    "undercover": "WATER SKIING",
+                    "hints": [
+                        "ocean wave riding",
+                        "waxed board",
+                        "balance"
+                    ]
+                },
+                {
+                    "word": "ICE HOCKEY",
+                    "undercover": "FIGURE SKATING",
+                    "hints": [
+                        "ice rink",
+                        "puck stick",
+                        "skate blades"
+                    ]
+                },
+                {
+                    "word": "DRUM KIT",
+                    "undercover": "TAMBOURINE",
+                    "hints": [
+                        "cymbals",
+                        "drumsticks",
+                        "percussion rhythm"
+                    ]
+                }
+            ]
+        },
+        "Places": {
+            "easy": [
+                {
+                    "word": "BEACH",
+                    "undercover": "LAKE",
+                    "hints": [
+                        "ocean waves",
+                        "sandcastles",
+                        "coastal sun"
+                    ]
+                },
+                {
+                    "word": "AIRPORT",
+                    "undercover": "TRAIN STATION",
+                    "hints": [
+                        "runway planes",
+                        "terminals",
+                        "boarding passes"
+                    ]
+                },
+                {
+                    "word": "SCHOOL",
+                    "undercover": "LIBRARY",
+                    "hints": [
+                        "classrooms",
+                        "teachers",
+                        "desks and books"
+                    ]
+                },
+                {
+                    "word": "PARK",
+                    "undercover": "GARDEN",
+                    "hints": [
+                        "benches",
+                        "green trees",
+                        "playground swing"
+                    ]
+                }
+            ],
+            "medium": [
+                {
+                    "word": "MUSEUM",
+                    "undercover": "ART GALLERY",
+                    "hints": [
+                        "historical exhibits",
+                        "curated artifacts",
+                        "statues"
+                    ]
+                },
+                {
+                    "word": "HOSPITAL",
+                    "undercover": "CLINIC",
+                    "hints": [
+                        "doctors and nurses",
+                        "ambulances",
+                        "patient rooms"
+                    ]
+                },
+                {
+                    "word": "RESTAURANT",
+                    "undercover": "CAFE",
+                    "hints": [
+                        "menu orders",
+                        "waiters",
+                        "dining tables"
+                    ]
+                },
+                {
+                    "word": "CINEMA",
+                    "undercover": "THEATER",
+                    "hints": [
+                        "big movie screen",
+                        "auditorium seats",
+                        "ticket counter"
+                    ]
+                }
+            ],
+            "hard": [
+                {
+                    "word": "LIGHTHOUSE",
+                    "undercover": "WINDMILL",
+                    "hints": [
+                        "coastal beacon",
+                        "tower spiral",
+                        "night maritime beam"
+                    ]
+                },
+                {
+                    "word": "ZOO",
+                    "undercover": "AQUARIUM",
+                    "hints": [
+                        "animal enclosures",
+                        "safari walk",
+                        "feeding hours"
+                    ]
+                },
+                {
+                    "word": "HOTEL",
+                    "undercover": "RESORT",
+                    "hints": [
+                        "overnight rooms",
+                        "reception lobby",
+                        "suitcases"
+                    ]
+                }
+            ],
+            "expert": [
+                {
+                    "word": "AMUSEMENT PARK",
+                    "undercover": "WATER PARK",
+                    "hints": [
+                        "roller coasters",
+                        "ferris wheel",
+                        "carnival rides"
+                    ]
+                },
+                {
+                    "word": "CASTLE",
+                    "undercover": "PALACE",
+                    "hints": [
+                        "stone towers",
+                        "drawbridge",
+                        "medieval moat"
+                    ]
+                },
+                {
+                    "word": "STADIUM",
+                    "undercover": "ARENA",
+                    "hints": [
+                        "cheering crowd",
+                        "floodlights",
+                        "massive bleachers"
+                    ]
+                },
+                {
+                    "word": "SUBMARINE",
+                    "undercover": "SPACESHIP",
+                    "hints": [
+                        "underwater vessel",
+                        "periscope view",
+                        "deep voyage"
+                    ]
+                }
+            ]
+        }
     }
-  }
 }

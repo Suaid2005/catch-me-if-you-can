@@ -11,7 +11,11 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useGameStore } from "@/lib/store";
+import GameHeader from "@/components/ui/GameHeader";
+
+const Avatar3D = dynamic(() => import("@/components/ui/Avatar3D"), { ssr: false });
 
 export default function ResultsPage() {
   const router = useRouter();
@@ -44,8 +48,10 @@ export default function ResultsPage() {
     (myRole?.team === "impostor" && gameResult.winner === "impostor");
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="max-w-2xl w-full space-y-6">
+    <main className="min-h-screen flex flex-col items-center justify-between p-4 md:p-8">
+      <GameHeader showBack={true} backHref="/" backLabel="Main Menu" />
+
+      <div className="max-w-2xl w-full space-y-6 my-auto">
         {/* Result Banner */}
         <div
           className={`game-card text-center py-8 border-2 ${
@@ -69,12 +75,17 @@ export default function ResultsPage() {
         <div className="game-card">
           <h2 className="text-lg font-semibold mb-4">Role Reveals</h2>
           <div className="grid grid-cols-2 gap-3">
-            {gameResult.players.map((player) => (
+            {gameResult.players?.map((player) => (
               <div
                 key={player.sid}
                 className="flex items-center gap-3 p-3 rounded-lg bg-game-dark"
               >
-                <span className="text-2xl">{player.avatar}</span>
+                <Avatar3D
+                  avatar={player.avatar}
+                  name={player.username}
+                  size="sm"
+                  isImpostor={player.role?.name?.toLowerCase().includes("impostor")}
+                />
                 <div>
                   <p className="font-medium text-sm">{player.username}</p>
                   <p className="text-xs text-gray-400">
@@ -86,10 +97,18 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Play Again */}
-        <button onClick={playAgain} className="btn-primary w-full text-lg py-4">
-          🎮 Play Again
-        </button>
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button onClick={playAgain} className="btn-primary flex-1 text-lg py-4">
+            🎮 Play Again
+          </button>
+          <button
+            onClick={() => router.push("/vault")}
+            className="flex-1 py-4 px-6 rounded-xl bg-gradient-to-r from-amber-600/30 to-purple-600/30 hover:from-amber-600/50 hover:to-purple-600/50 border border-amber-500/40 text-amber-300 font-bold text-sm flex items-center justify-center gap-2 transition-all"
+          >
+            <span>🛍️</span> Visit Cosmetic Vault
+          </button>
+        </div>
       </div>
     </main>
   );

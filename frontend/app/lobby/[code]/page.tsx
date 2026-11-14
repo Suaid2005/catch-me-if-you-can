@@ -10,11 +10,14 @@
 
 import { useEffect, useCallback, useState, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useGameStore } from "@/lib/store";
 import { connectSocket, getSocket } from "@/lib/socket";
 import { getToken } from "@/lib/api";
 import { sound } from "@/lib/sound";
 import type { Player } from "@/types/game.types";
+
+const Avatar3D = dynamic(() => import("@/components/ui/Avatar3D"), { ssr: false });
 
 const ALL_MODES = [
   { id: "classic", name: "Classic Impostor", emoji: "🕵️", desc: "1 Impostor, guess word if caught" },
@@ -49,30 +52,58 @@ export default function LobbyRoomPage() {
 
   // Host match setup state
   const [selectedMode, setSelectedMode] = useState("classic");
-  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard" | "expert">("medium");
+  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard" | "expert">("easy");
   const [category, setCategory] = useState("Random");
   const [impostorMode, setImpostorMode] = useState<"auto" | "manual">("auto");
   const [manualImpostors, setManualImpostors] = useState(1);
   const [clueRounds, setClueRounds] = useState(2);
   const [enableChaos, setEnableChaos] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   const setupSocket = useCallback(() => {
     if (!user || !code) return;
 
     const token = getToken();
     const socket = connectSocket(token || undefined);
+    const equippedAvatar =
+      useGameStore.getState().progression?.equippedAvatar ||
+      user.avatar ||
+      "avatar_classic_detective";
 
-    // Join this lobby room
+    // Join this lobby room with token authentication and authoritative equipped avatar
     socket.emit("lobby_join", {
       room_code: code,
       user_id: user.id,
       username: user.username,
-      avatar: user.avatar,
+      avatar: equippedAvatar,
+      token: token || undefined,
     });
 
     // Listen for lobby state updates
-    socket.on("lobby:state", (data: { players: Player[]; room_code: string }) => {
+    socket.on("lobby:state", (data: { players: Player[]; room_code: string; host_sid?: string }) => {
       setPlayers(data.players);
+    });
+
+    // Listen for player status changes (reconnecting vs connected)
+    socket.on("player:status_changed", (data: { sid: string; user_id?: string; username?: string; status: string }) => {
+      const current = useGameStore.getState().players;
+      setPlayers(
+        current.map((p) => {
+          if (p.sid === data.sid || (data.user_id && p.user_id === data.user_id)) {
+            return {
+              ...p,
+              is_connected: data.status === "connected",
+              reconnecting: data.status === "reconnecting",
+            };
+          }
+          return p;
+        })
+      );
+    });
+
+    // Listen for host changes
+    socket.on("room:host_changed", () => {
+      sound.playNotification();
     });
 
     // Listen for game start
@@ -92,6 +123,8 @@ export default function LobbyRoomPage() {
 
     return () => {
       socket.off("lobby:state");
+      socket.off("player:status_changed");
+      socket.off("room:host_changed");
       socket.off("game:match_started");
       socket.off("game:phase_changed");
       socket.off("error");
@@ -163,10 +196,18 @@ export default function LobbyRoomPage() {
               </button>
             </div>
           </div>
-          <div className="text-right text-xs text-gray-400">
+          <div className="text-right text-xs text-gray-400 flex items-center gap-3">
             <span className="px-3 py-1 rounded-full bg-purple-950 border border-purple-800 text-purple-200 font-bold">
               {players.length} / 12 Connected
             </span>
+            <button
+              onClick={() => setShowLeaveModal(true)}
+              className="px-2.5 py-1 rounded-full border border-gray-800 hover:border-rose-500/60 bg-slate-900/80 hover:bg-rose-950/40 text-xs font-bold text-gray-400 hover:text-rose-300 transition-all flex items-center gap-1"
+              title="Leave Room"
+            >
+              <span>🚪</span>
+              <span>Leave</span>
+            </button>
           </div>
         </div>
 
@@ -189,7 +230,13 @@ export default function LobbyRoomPage() {
                              bg-game-dark/80 border border-gray-800 hover:border-gray-700 transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{player.avatar}</span>
+                    <Avatar3D
+                      avatar={player.avatar}
+                      name={player.username}
+                      size="sm"
+                      interactive={false}
+                      animated={false}
+                    />
                     <div>
                       <p className="font-bold text-xs text-white">
                         {player.username}
@@ -202,15 +249,22 @@ export default function LobbyRoomPage() {
                       </p>
                     </div>
                   </div>
-                  <span
-                    className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
-                      player.is_ready
-                        ? "bg-emerald-950/80 border-emerald-600 text-emerald-300"
-                        : "bg-gray-800/80 border-gray-700 text-gray-400"
-                    }`}
-                  >
-                    {player.is_ready ? "✓ Ready" : "Waiting…"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {(player.reconnecting || player.is_connected === false) && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950 border border-amber-500 text-amber-300 font-bold animate-pulse">
+                        Reconnecting...
+                      </span>
+                    )}
+                    <span
+                      className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                        player.is_ready
+                          ? "bg-emerald-950/80 border-emerald-600 text-emerald-300"
+                          : "bg-gray-800/80 border-gray-700 text-gray-400"
+                      }`}
+                    >
+                      {player.is_ready ? "✓ Ready" : "Waiting…"}
+                    </span>
+                  </div>
                 </div>
               ))
             )}
@@ -406,6 +460,46 @@ export default function LobbyRoomPage() {
           </p>
         )}
       </div>
+
+      {/* ──────────────── VOLUNTARY LEAVE CONFIRMATION MODAL ──────────────── */}
+      {showLeaveModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="max-w-md w-full bg-slate-950 border border-rose-500/40 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-950 border border-rose-500 flex items-center justify-center text-xl">
+                🚪
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Leave Lobby?</h3>
+                <p className="text-xs text-gray-400">
+                  Are you sure you want to leave this game room? You will need the code to rejoin.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setShowLeaveModal(false)}
+                className="px-4 py-2 rounded-xl border border-gray-700 bg-slate-900 hover:bg-slate-800 text-xs font-bold text-white transition-colors"
+              >
+                Stay
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  getSocket()?.emit("lobby_leave", {});
+                  router.push("/");
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-xs font-bold text-white shadow-lg shadow-rose-600/30 transition-all"
+              >
+                Leave Lobby
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

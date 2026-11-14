@@ -14,6 +14,7 @@ Implements:
 """
 import random
 import logging
+import uuid
 from typing import Dict, Any, List, Optional, Tuple
 
 from ml.word_intelligence import word_intelligence
@@ -171,7 +172,7 @@ class SecretWordEngine:
         players: List[Dict[str, Any]],
         mode: str = "classic",
         category: Optional[str] = "Random",
-        difficulty: str = "medium",
+        difficulty: str = "easy",
         impostor_count: Optional[int] = None,
         clue_rounds: int = 2,
         enable_chaos: bool = False
@@ -183,6 +184,7 @@ class SecretWordEngine:
             mode = "classic"
 
         n = len(players)
+        match_id = uuid.uuid4().hex
 
         # Determine number of impostors
         if impostor_count is None or impostor_count < 1:
@@ -253,6 +255,7 @@ class SecretWordEngine:
                 description = f"Your secret word is: {secret_word}. Describe it without giving it away!"
 
             player_assignments[sid] = {
+                "match_id": match_id,
                 "role": role,
                 "team": team,
                 "is_impostor": is_impostor,
@@ -260,7 +263,9 @@ class SecretWordEngine:
                 "card_title": card_title,
                 "description": description,
                 "is_alive": True,
-                "score": 0
+                "score": 0,
+                "user_id": p.get("user_id"),
+                "player_key": p.get("user_id") or sid
             }
 
         # Determine turn order for clues
@@ -269,6 +274,7 @@ class SecretWordEngine:
         chaos_card = draw_chaos_card() if (enable_chaos or mode == "mystery_twist") else None
 
         return {
+            "match_id": match_id,
             "mode": mode,
             "category": word_data["category"],
             "difficulty": difficulty,

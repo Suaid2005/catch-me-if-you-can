@@ -45,6 +45,8 @@ htmlcov/
 # Build
 dist/
 build/
+*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
 
 
 # Protect all environment files (allow safe example templates)

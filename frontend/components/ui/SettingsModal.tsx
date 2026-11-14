@@ -21,19 +21,25 @@ interface SettingsModalProps {
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
   const [sfxMuted, setSfxMuted] = useState(false);
+  const [sfxVolume, setSfxVolumeState] = useState(0.8);
   const [bgmMuted, setBgmMuted] = useState(true);
+  const [musicVolume, setMusicVolumeState] = useState(0.4);
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedTheme = (localStorage.getItem("catchme_theme") as "dark" | "light" | "system") || "dark";
       const savedSfxMute = localStorage.getItem("catchme_sfx_muted") === "true";
-      const savedBgmMute = localStorage.getItem("catchme_bgm_muted") !== "false";
+      const savedBgmMute = localStorage.getItem("catchme_music_enabled") !== "true";
       const savedReducedMotion = localStorage.getItem("catchme_reduced_motion") === "true";
+      const savedSfxVol = sound.getSfxVolume();
+      const savedMusicVol = sound.getMusicVolume();
 
       setTheme(savedTheme);
       setSfxMuted(savedSfxMute);
       setBgmMuted(savedBgmMute);
+      setSfxVolumeState(savedSfxVol);
+      setMusicVolumeState(savedMusicVol);
       setReducedMotion(savedReducedMotion);
 
       sound.setMuted(savedSfxMute);
@@ -64,16 +70,33 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     const nextVal = !sfxMuted;
     setSfxMuted(nextVal);
     sound.setMuted(nextVal);
-    localStorage.setItem("catchme_sfx_muted", String(nextVal));
     if (!nextVal) sound.playClick();
+  };
+
+  const handleSfxVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const vol = parseFloat(e.target.value);
+    setSfxVolumeState(vol);
+    sound.setSfxVolume(vol);
+    if (sfxMuted && vol > 0) {
+      setSfxMuted(false);
+      sound.setMuted(false);
+    }
   };
 
   const toggleBgm = () => {
     sound.playClick();
-    const nextVal = !bgmMuted;
-    setBgmMuted(nextVal);
-    sound.toggleBgm(!nextVal);
-    localStorage.setItem("catchme_bgm_muted", String(nextVal));
+    const isEnabled = sound.toggleMusic();
+    setBgmMuted(!isEnabled);
+  };
+
+  const handleMusicVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const vol = parseFloat(e.target.value);
+    setMusicVolumeState(vol);
+    sound.setMusicVolume(vol);
+    if (bgmMuted && vol > 0) {
+      sound.toggleMusic();
+      setBgmMuted(false);
+    }
   };
 
   const toggleMotion = () => {
@@ -112,44 +135,84 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <div className="space-y-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Audio Settings</h3>
 
-          <div className="flex items-center justify-between p-3 rounded-xl bg-game-dark border border-gray-800">
-            <div className="flex items-center gap-2.5">
-              <span className="text-xl">{sfxMuted ? "🔇" : "🔊"}</span>
-              <div>
-                <p className="text-sm font-bold text-white">Sound Effects (SFX)</p>
-                <p className="text-[10px] text-gray-400">Buttons, turn chimes, voting fanfare</p>
+          {/* Sound Effects */}
+          <div className="p-3.5 rounded-xl bg-game-dark border border-gray-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">{sfxMuted ? "🔇" : "🔊"}</span>
+                <div>
+                  <p className="text-sm font-bold text-white">Sound Effects (SFX)</p>
+                  <p className="text-[10px] text-gray-400">Buttons, turn chimes, voting fanfare</p>
+                </div>
               </div>
+              <button
+                onClick={toggleSfx}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                  !sfxMuted
+                    ? "bg-game-green/20 text-game-green border-game-green/50"
+                    : "bg-gray-800 text-gray-400 border-gray-700"
+                }`}
+              >
+                {!sfxMuted ? "ON" : "MUTED"}
+              </button>
             </div>
-            <button
-              onClick={toggleSfx}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                !sfxMuted
-                  ? "bg-game-green/20 text-game-green border-game-green/50"
-                  : "bg-gray-800 text-gray-400 border-gray-700"
-              }`}
-            >
-              {!sfxMuted ? "ON" : "OFF"}
-            </button>
+            {/* SFX Volume Slider */}
+            <div className="flex items-center gap-3 pt-1">
+              <span className="text-[10px] text-gray-400 font-mono w-12">Volume</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={sfxMuted ? 0 : sfxVolume}
+                onChange={handleSfxVolumeChange}
+                aria-label="Sound Effects Volume"
+                className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-game-green"
+              />
+              <span className="text-[10px] text-gray-400 font-mono w-8 text-right">
+                {sfxMuted ? "0%" : `${Math.round(sfxVolume * 100)}%`}
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-xl bg-game-dark border border-gray-800">
-            <div className="flex items-center gap-2.5">
-              <span className="text-xl">{bgmMuted ? "🔇" : "🎵"}</span>
-              <div>
-                <p className="text-sm font-bold text-white">Ambient Background Audio</p>
-                <p className="text-[10px] text-gray-400">Subtle generative cyber synthesizer</p>
+          {/* Background Music */}
+          <div className="p-3.5 rounded-xl bg-game-dark border border-gray-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">{bgmMuted ? "🔇" : "🎵"}</span>
+                <div>
+                  <p className="text-sm font-bold text-white">Mystery Soundtrack (112 BPM)</p>
+                  <p className="text-[10px] text-gray-400">Continuous procedural detective synth theme</p>
+                </div>
               </div>
+              <button
+                onClick={toggleBgm}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                  !bgmMuted
+                    ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/50"
+                    : "bg-gray-800 text-gray-400 border-gray-700"
+                }`}
+              >
+                {!bgmMuted ? "ON" : "OFF"}
+              </button>
             </div>
-            <button
-              onClick={toggleBgm}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                !bgmMuted
-                  ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/50"
-                  : "bg-gray-800 text-gray-400 border-gray-700"
-              }`}
-            >
-              {!bgmMuted ? "ON" : "OFF"}
-            </button>
+            {/* Music Volume Slider */}
+            <div className="flex items-center gap-3 pt-1">
+              <span className="text-[10px] text-gray-400 font-mono w-12">Volume</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={bgmMuted ? 0 : musicVolume}
+                onChange={handleMusicVolumeChange}
+                aria-label="Background Music Volume"
+                className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+              />
+              <span className="text-[10px] text-gray-400 font-mono w-8 text-right">
+                {bgmMuted ? "0%" : `${Math.round(musicVolume * 100)}%`}
+              </span>
+            </div>
           </div>
         </div>
 

@@ -1,11 +1,6 @@
 
-const path = require("path");
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Explicitly identify the frontend project root.
-  outputFileTracingRoot: path.join(__dirname),
-
   reactStrictMode: true,
 
   env: {

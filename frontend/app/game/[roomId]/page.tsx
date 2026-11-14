@@ -15,11 +15,14 @@
 
 import { useEffect, useCallback, useState, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useGameStore } from "@/lib/store";
 import { connectSocket, getSocket } from "@/lib/socket";
 import { getToken } from "@/lib/api";
 import { sound } from "@/lib/sound";
 import type { Player, Role } from "@/types/game.types";
+
+const Avatar3D = dynamic(() => import("@/components/ui/Avatar3D"), { ssr: false });
 
 interface RoleAssignment {
   role: string;
@@ -48,11 +51,32 @@ interface ChatEntry {
   suspicion_score?: number;
 }
 
+interface PlayerReward {
+  xp_earned: number;
+  coins_earned: number;
+  breakdown: Record<string, number>;
+  current_xp?: number;
+  current_coins?: number;
+  level?: number;
+  level_progress_pct?: number;
+  new_total_xp?: number;
+  new_total_coins?: number;
+  level_info?: {
+    level: number;
+    title?: string;
+    xp_in_level?: number;
+    xp_to_next?: number;
+    pct?: number;
+  };
+}
+
 interface FinalResult {
+  match_id?: string;
   winner: string;
   secret_word: string;
   win_reason?: string;
   player_assignments: Record<string, any>;
+  rewards?: Record<string, PlayerReward>;
   guessed_word?: string;
   is_correct?: boolean;
 }
@@ -62,8 +86,9 @@ export default function OnlineGamePage() {
   const params = useParams();
   const roomId = (params.roomId as string)?.toUpperCase();
 
-  const { user, players, setPlayers } = useGameStore();
+  const { user, players, setPlayers, addRewards, syncAuthoritativeRewards } = useGameStore();
   const [mySid, setMySid] = useState<string | null>(null);
+  const lastHandledMatchIdRef = useRef<string | null>(null);
 
   // Authoritative Match State
   const [phase, setPhase] = useState<
@@ -102,6 +127,24 @@ export default function OnlineGamePage() {
   const [finalGuessImpostorSid, setFinalGuessImpostorSid] = useState<string | null>(null);
   const [gameResult, setGameResult] = useState<FinalResult | null>(null);
 
+  // Authoritative 60-Second Clue Timer & Leave Modal State
+  const [turnExpiresAt, setTurnExpiresAt] = useState<number | null>(null);
+  const [turnRemainingSeconds, setTurnRemainingSeconds] = useState<number>(60);
+  const [showLeaveConfirmModal, setShowLeaveConfirmModal] = useState(false);
+
+  // Active match exit protection (warn before accidental tab closure or refresh)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (phase !== "results") {
+        e.preventDefault();
+        e.returnValue = "An active multiplayer match is in progress. Leaving now will abandon the match.";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [phase]);
+
   // Setup Real-Time Socket Connection
   const setupGameSocket = useCallback(() => {
     if (!user || !roomId) return;
@@ -110,24 +153,32 @@ export default function OnlineGamePage() {
     const socket = connectSocket(token || undefined);
     setMySid(socket.id || null);
 
-    // Ensure socket is joined to this room and request match sync
-    socket.emit("lobby_join", {
+    const joinPayload = {
       room_code: roomId,
       user_id: user.id,
       username: user.username,
       avatar: user.avatar,
+      token: token || undefined,
+    };
+
+    // Ensure socket is joined to this room and request match sync with authentication token
+    socket.emit("lobby_join", joinPayload);
+    socket.emit("game_request_sync", {
+      room_code: roomId,
+      user_id: user.id,
+      username: user.username,
+      token: token || undefined,
     });
-    socket.emit("game_request_sync", {});
 
     socket.on("connect", () => {
       setMySid(socket.id || null);
-      socket.emit("lobby_join", {
+      socket.emit("lobby_join", joinPayload);
+      socket.emit("game_request_sync", {
         room_code: roomId,
         user_id: user.id,
         username: user.username,
-        avatar: user.avatar,
+        token: token || undefined,
       });
-      socket.emit("game_request_sync", {});
     });
 
     // 1. Private Role Delivery
@@ -136,8 +187,9 @@ export default function OnlineGamePage() {
       sound.playTurnChime();
     });
 
-    // 2. Public Match Setup
+    // 2. Public Match Setup & Recovery Sync
     socket.on("game:match_started", (data: any) => {
+      lastHandledMatchIdRef.current = null;
       if (data.players) setPlayers(data.players);
       setCategory(data.category || "Random");
       setCurrentRound(data.current_round || 1);
@@ -145,7 +197,13 @@ export default function OnlineGamePage() {
       setTurnOrder(data.turn_order || []);
       setCurrentTurnSid(data.current_turn_sid || null);
       setChaosCard(data.chaos_card || null);
-      setPhase("role_reveal");
+      if (data.phase) setPhase(data.phase);
+      if (data.turn_expires_at) setTurnExpiresAt(data.turn_expires_at * 1000);
+      if (data.remaining_seconds !== undefined) {
+        setTurnRemainingSeconds(data.remaining_seconds);
+      } else if (data.duration_seconds) {
+        setTurnRemainingSeconds(data.duration_seconds);
+      }
     });
 
     // Role ack progress
@@ -153,7 +211,7 @@ export default function OnlineGamePage() {
       setRoleAckProgress(data);
     });
 
-    // 3. Phase Changes
+    // 3. Phase Changes & Authoritative Timer Initialization
     socket.on("game:phase_changed", (data: {
       phase: string;
       current_turn_sid?: string;
@@ -161,6 +219,8 @@ export default function OnlineGamePage() {
       total_rounds?: number;
       all_clues?: ClueEntry[];
       impostor_sid?: string;
+      duration_seconds?: number;
+      turn_expires_at?: number;
     }) => {
       const nextPhase = data.phase as any;
       setPhase(nextPhase);
@@ -170,6 +230,8 @@ export default function OnlineGamePage() {
       if (data.total_rounds) setTotalRounds(data.total_rounds);
       if (data.all_clues) setAllClues(data.all_clues);
       if (data.impostor_sid) setFinalGuessImpostorSid(data.impostor_sid);
+      if (data.turn_expires_at) setTurnExpiresAt(data.turn_expires_at * 1000);
+      if (data.duration_seconds) setTurnRemainingSeconds(data.duration_seconds);
 
       if (nextPhase === "clues") sound.playTurnChime();
       if (nextPhase === "discussion") sound.playNotification();
@@ -186,17 +248,45 @@ export default function OnlineGamePage() {
       }
     });
 
-    // 5. Clue Broadcast & Turn Advancement
+    // 5. Clue Broadcast & Turn Advancement with Synchronized Timer
     socket.on("game:clue_broadcast", (data: ClueEntry) => {
       setAllClues((prev) => [...prev, data]);
       setTypingPlayer(null);
       sound.playNotification();
     });
 
-    socket.on("game:turn_advanced", (data: { current_turn_sid: string; current_round: number }) => {
+    socket.on("game:turn_advanced", (data: {
+      current_turn_sid: string;
+      current_round: number;
+      duration_seconds?: number;
+      turn_expires_at?: number;
+    }) => {
       setCurrentTurnSid(data.current_turn_sid);
       setCurrentRound(data.current_round);
+      if (data.turn_expires_at) setTurnExpiresAt(data.turn_expires_at * 1000);
+      if (data.duration_seconds) setTurnRemainingSeconds(data.duration_seconds);
       sound.playTurnChime();
+    });
+
+    // Player Reconnection Status & Host Migration
+    socket.on("player:status_changed", (data: { sid: string; user_id?: string; username?: string; status: string }) => {
+      const current = useGameStore.getState().players;
+      setPlayers(
+        current.map((p) => {
+          if (p.sid === data.sid || (data.user_id && p.user_id === data.user_id)) {
+            return {
+              ...p,
+              is_connected: data.status === "connected",
+              reconnecting: data.status === "reconnecting",
+            };
+          }
+          return p;
+        })
+      );
+    });
+
+    socket.on("room:host_changed", (data: { host_sid: string; host_username?: string }) => {
+      console.log("Host changed to", data);
     });
 
     // 6. Discussion Chat
@@ -220,21 +310,58 @@ export default function OnlineGamePage() {
       sound.playCaughtBuzzer();
     });
 
-    // 8. Final Guess Result & Match End
-    socket.on("game:final_guess_result", (data: FinalResult) => {
+    // 8. Final Guess Result & Match End (Idempotent Handler)
+    const handleMatchConclusion = (data: FinalResult) => {
+      // Always keep UI synchronized with authoritative backend result
       setGameResult(data);
       setPhase("results");
-      sound.playVictory();
+
+      const matchId = data.match_id;
+      if (!matchId) {
+        console.warn("[Protocol Warning] Match conclusion payload missing match_id:", data);
+        if (!lastHandledMatchIdRef.current) {
+          lastHandledMatchIdRef.current = "unidentified_match";
+          sound.playVictory();
+        }
+        return;
+      }
+
+      // Play victory audio and apply rewards only once per match_id
+      if (lastHandledMatchIdRef.current !== matchId) {
+        lastHandledMatchIdRef.current = matchId;
+        sound.playVictory();
+
+        // Sync authoritative multiplayer progression
+        if (data.rewards) {
+          const myReward = (mySid && data.rewards[mySid]) ||
+            (user?.id && data.rewards[user.id]) ||
+            (user?.username && Object.values(data.rewards).find((r: any) => r.username === user.username));
+          if (myReward) {
+            if (myReward.new_total_xp !== undefined && myReward.new_total_coins !== undefined) {
+              syncAuthoritativeRewards(
+                myReward.new_total_xp,
+                myReward.new_total_coins,
+                myReward.level_info?.level
+              );
+            } else {
+              addRewards(myReward.xp_earned, myReward.coins_earned);
+            }
+          }
+        }
+      }
+    };
+
+    socket.on("game:final_guess_result", (data: FinalResult) => {
+      handleMatchConclusion(data);
     });
 
     socket.on("game:match_ended", (data: FinalResult) => {
-      setGameResult(data);
-      setPhase("results");
-      sound.playVictory();
+      handleMatchConclusion(data);
     });
 
     // 9. Replay return to lobby
     socket.on("game:returned_to_lobby", () => {
+      lastHandledMatchIdRef.current = null;
       sound.playClick();
       router.push(`/lobby/${roomId}`);
     });
@@ -254,8 +381,25 @@ export default function OnlineGamePage() {
       socket.off("game:final_guess_result");
       socket.off("game:match_ended");
       socket.off("game:returned_to_lobby");
+      socket.off("player:status_changed");
+      socket.off("room:host_changed");
     };
   }, [user, roomId, router, setPlayers]);
+
+  // Synchronized countdown ticker for clues phase
+  useEffect(() => {
+    if (phase !== "clues" || !turnExpiresAt) return;
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.ceil((turnExpiresAt - now) / 1000));
+      setTurnRemainingSeconds(remaining);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 250);
+    return () => clearInterval(interval);
+  }, [phase, turnExpiresAt]);
 
   useEffect(() => {
     if (!user) {
@@ -369,11 +513,22 @@ export default function OnlineGamePage() {
           </span>
         </div>
 
-        {/* Player Badge */}
-        <div className="flex items-center gap-2 bg-slate-900 border border-gray-800 rounded-full px-3 py-1 text-xs">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-bold">{user?.username}</span>
-          <span className="text-gray-500">({user?.avatar})</span>
+        {/* Actions & Player Badge */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowLeaveConfirmModal(true)}
+            className="px-2.5 py-1 rounded-full border border-gray-800 hover:border-rose-500/60 bg-slate-900/80 hover:bg-rose-950/40 text-xs font-bold text-gray-400 hover:text-rose-300 transition-all flex items-center gap-1"
+            title="Leave Match"
+          >
+            <span>🚪</span>
+            <span className="hidden sm:inline">Leave</span>
+          </button>
+
+          <div className="flex items-center gap-2 bg-slate-900 border border-gray-800 rounded-full px-2.5 py-1 text-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <Avatar3D avatar={user?.avatar} name={user?.username} size="xs" interactive={false} animated={false} />
+            <span className="font-bold">{user?.username}</span>
+          </div>
         </div>
       </header>
 
@@ -481,16 +636,27 @@ export default function OnlineGamePage() {
                 <span className="text-purple-400 font-mono uppercase tracking-widest">
                   Round {currentRound} of {totalRounds} · Clue Phase
                 </span>
-                <span className="text-gray-400">
-                  Active Turn: <strong className="text-cyan-300">{activePlayer?.username || "Waiting..."}</strong>
-                </span>
+
+                {/* 60s Authoritative Timer Pill */}
+                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono font-black tracking-wider transition-all shadow-md ${
+                  turnRemainingSeconds <= 10
+                    ? "border-rose-500 bg-rose-950/80 text-rose-300 shadow-rose-500/30 animate-pulse"
+                    : turnRemainingSeconds <= 20
+                    ? "border-amber-500 bg-amber-950/60 text-amber-300 shadow-amber-500/20"
+                    : "border-cyan-500 bg-cyan-950/60 text-cyan-300 shadow-cyan-500/20"
+                }`}>
+                  <span className="text-sm">⏱️</span>
+                  <span>{turnRemainingSeconds}s</span>
+                  {turnRemainingSeconds <= 10 && <span className="text-[10px] uppercase font-bold text-rose-400">Hurry!</span>}
+                </div>
               </div>
 
-              {/* Turn Sequence Track Chips */}
+              {/* Turn Sequence Track Chips with Reconnecting Status */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 {turnOrder.map((sid, idx) => {
                   const p = players.find((pl) => pl.sid === sid);
                   const isCurrent = sid === currentTurnSid;
+                  const isReconnecting = p?.reconnecting || p?.is_connected === false;
                   const hasGivenClueThisRound = allClues.some(
                     (c) => c.sid === sid && c.round === currentRound
                   );
@@ -508,6 +674,11 @@ export default function OnlineGamePage() {
                     >
                       <span>{p?.avatar || "👤"}</span>
                       <span>{p?.username || `Player ${idx + 1}`}</span>
+                      {isReconnecting && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 border border-amber-500 text-amber-300 animate-pulse">
+                          Reconnecting...
+                        </span>
+                      )}
                       {hasGivenClueThisRound && <span className="text-emerald-400">✓</span>}
                       {isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />}
                     </div>
@@ -535,7 +706,18 @@ export default function OnlineGamePage() {
                       ✍️
                     </div>
                     <div>
-                      <h3 className="font-black text-lg text-white">Your Turn to Speak!</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-black text-lg text-white">Your Turn to Speak!</h3>
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-mono font-bold border ${
+                          turnRemainingSeconds <= 10
+                            ? "bg-rose-950 border-rose-500 text-rose-300 animate-pulse"
+                            : turnRemainingSeconds <= 20
+                            ? "bg-amber-950 border-amber-500 text-amber-300"
+                            : "bg-cyan-950 border-cyan-500 text-cyan-300"
+                        }`}>
+                          ⏱️ {turnRemainingSeconds}s remaining
+                        </span>
+                      </div>
                       <p className="text-xs text-gray-400">
                         {roleData?.is_impostor
                           ? "You don't know the word! Give a subtle, general clue to blend in."
@@ -569,9 +751,14 @@ export default function OnlineGamePage() {
                   <div className="flex items-center gap-3">
                     <span className="text-3xl">{activePlayer?.avatar || "⏳"}</span>
                     <div>
-                      <h3 className="font-bold text-sm text-white">
-                        Waiting for {activePlayer?.username || "teammate"} to submit a clue...
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-sm text-white">
+                          Waiting for {activePlayer?.username || "teammate"} to submit a clue...
+                        </h3>
+                        <span className="text-xs font-mono font-bold text-cyan-400">
+                          ({turnRemainingSeconds}s)
+                        </span>
+                      </div>
                       {typingPlayer ? (
                         <p className="text-xs font-bold text-cyan-400 flex items-center gap-1.5 animate-pulse">
                           <span>✍️</span> {typingPlayer} is writing a clue...
@@ -602,19 +789,31 @@ export default function OnlineGamePage() {
                     return (
                       <div
                         key={i}
-                        className="p-3 rounded-xl bg-slate-900/80 border border-gray-800 flex items-start gap-3"
+                        className="p-2 sm:p-2.5 rounded-xl bg-slate-900/80 border border-gray-800/80 hover:border-gray-700/80 flex items-center gap-3 transition-colors"
                       >
-                        <span className="text-xl">{p?.avatar || "👤"}</span>
-                        <div className="flex-1 space-y-0.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <strong className="text-white">{c.username}</strong>
-                            <span className="text-[10px] text-gray-500 font-mono">
+                        <div className="shrink-0 flex items-center justify-center">
+                          <Avatar3D
+                            avatar={p?.avatar}
+                            name={c.username}
+                            size="lg"
+                            interactive={false}
+                            animated={false}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+                          <div className="flex items-center gap-2 shrink-0">
+                            <strong className="text-xs font-bold text-white tracking-tight truncate max-w-[110px]">
+                              {c.username}
+                            </strong>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-800/90 text-cyan-400/90 font-mono shrink-0">
                               Round {c.round}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-200 font-medium">
-                            &ldquo;{c.clue}&rdquo;
-                          </p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm text-gray-200 font-medium break-words leading-snug">
+                              &ldquo;{c.clue}&rdquo;
+                            </p>
+                          </div>
                         </div>
                       </div>
                     );
@@ -647,7 +846,7 @@ export default function OnlineGamePage() {
                 return (
                   <div key={p.sid} className="p-4 rounded-2xl bg-slate-950/80 border border-gray-800 space-y-2">
                     <div className="flex items-center gap-2 border-b border-gray-800 pb-2">
-                      <span className="text-xl">{p.avatar}</span>
+                      <Avatar3D avatar={p.avatar} name={p.username} size="sm" interactive={false} animated={false} />
                       <strong className="text-sm text-white">{p.username}</strong>
                     </div>
                     <div className="space-y-1">
@@ -675,7 +874,7 @@ export default function OnlineGamePage() {
                 ) : (
                   chatMessages.map((m, idx) => (
                     <div key={idx} className="flex items-start gap-2 text-xs">
-                      <span className="text-base">{m.avatar}</span>
+                      <Avatar3D avatar={m.avatar} name={m.username} size="xs" interactive={false} animated={false} />
                       <div>
                         <strong className="text-purple-300">{m.username}: </strong>
                         <span className="text-gray-200">{m.message}</span>
@@ -756,14 +955,22 @@ export default function OnlineGamePage() {
                             sound.playClick();
                             setSelectedSuspectSid(p.sid);
                           }}
-                          className={`p-4 rounded-2xl border text-center transition-all ${
+                          className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center text-center transition-all ${
                             isSelected
-                              ? "border-rose-500 bg-rose-950/80 shadow-lg shadow-rose-600/30 scale-105"
+                              ? "border-rose-500 bg-rose-950/80 shadow-lg shadow-rose-600/30 scale-102 ring-2 ring-rose-400"
                               : "border-gray-800 bg-slate-950/80 hover:border-gray-700"
                           }`}
                         >
-                          <span className="text-3xl block mb-1">{p.avatar}</span>
-                          <strong className="text-sm font-bold text-white block truncate">
+                          <div className="mb-2 flex items-center justify-center">
+                            <Avatar3D
+                              avatar={p.avatar}
+                              name={p.username}
+                              size="sm"
+                              interactive={false}
+                              animated={isSelected}
+                            />
+                          </div>
+                          <strong className="text-xs sm:text-sm font-bold text-white block truncate max-w-full">
                             {p.username}
                           </strong>
                           {isSelected && (
@@ -867,6 +1074,76 @@ export default function OnlineGamePage() {
               </div>
             </div>
 
+            {/* Authoritative Gamification Reward Card */}
+            {(() => {
+              const myReward = gameResult.rewards ? (
+                (mySid && gameResult.rewards[mySid]) ||
+                (user?.id && gameResult.rewards[user.id]) ||
+                Object.values(gameResult.rewards)[0]
+              ) : null;
+
+              if (!myReward) return null;
+
+              return (
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-purple-950/70 via-slate-900 to-slate-950 border border-purple-500/40 shadow-xl space-y-4 text-left">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-purple-400">
+                        Match Progression & Rewards
+                      </span>
+                      <h3 className="text-lg font-black text-white flex items-center gap-2">
+                        <span>⭐</span> Level {myReward.level || 1} Agent
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-purple-900/40 border border-purple-500/50 px-3 py-1 rounded-full text-xs font-black text-purple-300">
+                        +{myReward.xp_earned} XP
+                      </div>
+                      <div className="bg-amber-900/40 border border-amber-500/50 px-3 py-1 rounded-full text-xs font-black text-amber-300">
+                        +{myReward.coins_earned} 🪙
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Level progress bar */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px] font-semibold text-gray-400">
+                      <span>Level Progress</span>
+                      <span>{myReward.level_progress_pct || 0}%</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-gray-900 rounded-full overflow-hidden border border-gray-800">
+                      <div
+                        className="h-full bg-gradient-to-r from-purple-500 to-amber-400 rounded-full transition-all duration-1000 ease-out"
+                        style={{ width: `${Math.min(100, Math.max(5, myReward.level_progress_pct || 0))}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Reward breakdown */}
+                  {myReward.breakdown && (
+                    <div className="pt-2 border-t border-gray-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                      <div className="bg-slate-900/90 rounded-lg p-2 border border-gray-800">
+                        <span className="text-[10px] text-gray-400 block">Match Complete</span>
+                        <strong className="text-purple-300">+{myReward.breakdown.base_completion || 75} XP</strong>
+                      </div>
+                      <div className="bg-slate-900/90 rounded-lg p-2 border border-gray-800">
+                        <span className="text-[10px] text-gray-400 block">Match Victory</span>
+                        <strong className="text-emerald-300">+{myReward.breakdown.victory || 0} XP</strong>
+                      </div>
+                      <div className="bg-slate-900/90 rounded-lg p-2 border border-gray-800">
+                        <span className="text-[10px] text-gray-400 block">Role Mastery</span>
+                        <strong className="text-amber-300">+{myReward.breakdown.role_bonus || 0} XP</strong>
+                      </div>
+                      <div className="bg-slate-900/90 rounded-lg p-2 border border-gray-800">
+                        <span className="text-[10px] text-gray-400 block">Clean Vote</span>
+                        <strong className="text-cyan-300">+{myReward.breakdown.clean_vote || 0} XP</strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* True Identities Roster */}
             <div className="bg-slate-950/80 border border-gray-800 rounded-2xl p-4 text-left space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">
@@ -876,18 +1153,30 @@ export default function OnlineGamePage() {
                 {players.map((p) => {
                   const assignment = gameResult.player_assignments[p.sid];
                   const isImp = assignment?.is_impostor;
+                  const pReward = gameResult.rewards ? (
+                    gameResult.rewards[p.sid] ||
+                    (p.user_id && gameResult.rewards[p.user_id])
+                  ) : null;
+
                   return (
                     <div
                       key={p.sid}
                       className="p-3 rounded-xl bg-slate-900 border border-gray-800 flex items-center justify-between"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl">{p.avatar}</span>
+                      <div className="flex items-center gap-2.5">
+                        <Avatar3D avatar={p.avatar} name={p.username} size="sm" interactive={false} animated={false} />
                         <div>
                           <strong className="text-sm text-white">{p.username}</strong>
-                          <span className="text-[10px] text-gray-400 block font-mono">
-                            {assignment?.card_title || (isImp ? "Impostor" : "Civilian")}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-gray-400 block font-mono">
+                              {assignment?.card_title || (isImp ? "Impostor" : "Civilian")}
+                            </span>
+                            {pReward && (
+                              <span className="text-[10px] text-amber-400 font-bold font-mono">
+                                • +{pReward.xp_earned} XP / +{pReward.coins_earned} 🪙
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <span
@@ -933,6 +1222,49 @@ export default function OnlineGamePage() {
         )}
 
       </div>
+      {/* ──────────────── VOLUNTARY LEAVE CONFIRMATION MODAL ──────────────── */}
+      {showLeaveConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="max-w-md w-full bg-slate-950 border border-rose-500/40 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-950 border border-rose-500 flex items-center justify-center text-xl">
+                ⚠️
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Abandon Mission?</h3>
+                <p className="text-xs text-gray-400">
+                  Are you sure you want to leave? Your role will be abandoned and your teammates will continue without you.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/20 text-xs text-rose-300">
+              💡 If you only refreshed or experienced connection lag, you can stay and continue playing smoothly.
+            </div>
+
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setShowLeaveConfirmModal(false)}
+                className="px-4 py-2.5 rounded-xl border border-gray-700 bg-slate-900 hover:bg-slate-800 text-xs font-bold text-white transition-colors"
+              >
+                Stay & Play
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  getSocket()?.emit("lobby_leave", {});
+                  router.push("/");
+                }}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-xs font-bold text-white shadow-lg shadow-rose-600/30 transition-all"
+              >
+                Confirm Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

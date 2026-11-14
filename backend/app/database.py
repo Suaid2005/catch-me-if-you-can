@@ -78,3 +78,65 @@ async def init_db() -> None:
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Dialect-agnostic backward-compatible schema migration for existing deployments
+        def migrate_schema(sync_conn):
+            from sqlalchemy import inspect, text
+            inspector = inspect(sync_conn)
+            dialect_name = sync_conn.dialect.name
+
+            # SEC-03: Advisory transaction lock for PostgreSQL multi-worker concurrency
+            if dialect_name == "postgresql":
+                sync_conn.execute(text("SELECT pg_advisory_xact_lock(74928153);"))
+
+            if "users" in inspector.get_table_names():
+                existing_cols = {col["name"] for col in inspector.get_columns("users")}
+
+                # Format JSON defaults based on target dialect (PostgreSQL vs SQLite)
+                if dialect_name == "postgresql":
+                    avatars_default = "JSON DEFAULT '[\"avatar_classic_detective\"]'::json"
+                    items_default = "JSON DEFAULT '[\"stamp_sus\"]'::json"
+                else:
+                    avatars_default = "TEXT DEFAULT '[\"avatar_classic_detective\"]'"
+                    items_default = "TEXT DEFAULT '[\"stamp_sus\"]'"
+
+                bool_false_default = "BOOLEAN DEFAULT FALSE" if dialect_name == "postgresql" else "BOOLEAN DEFAULT 0"
+                bool_true_default = "BOOLEAN DEFAULT TRUE" if dialect_name == "postgresql" else "BOOLEAN DEFAULT 1"
+
+                columns_to_ensure = [
+                    ("phone_number", "VARCHAR(32)"),
+                    ("coins", "INTEGER DEFAULT 150"),
+                    ("xp", "INTEGER DEFAULT 0"),
+                    ("level", "INTEGER DEFAULT 1"),
+                    ("unlocked_avatars", avatars_default),
+                    ("equipped_avatar", "VARCHAR(64) DEFAULT 'avatar_classic_detective'"),
+                    ("unlocked_items", items_default),
+                    ("equipped_frame", "VARCHAR(64)"),
+                    ("equipped_stamp", "VARCHAR(64) DEFAULT 'stamp_sus'"),
+                    ("email_verified", bool_false_default),
+                    ("phone_verified", bool_false_default),
+                    ("is_active", bool_true_default),
+                    ("is_legacy", bool_true_default),
+                ]
+
+                for col_name, col_def in columns_to_ensure:
+                    if col_name not in existing_cols:
+                        try:
+                            if dialect_name == "postgresql":
+                                sync_conn.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col_name} {col_def}"))
+                            else:
+                                sync_conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
+                        except Exception as e:
+                            # SEC-03: Gracefully handle duplicate column race conditions in concurrent workers
+                            err_msg = str(e).lower()
+                            if "duplicate column" in err_msg or "already exists" in err_msg:
+                                pass
+                            else:
+                                raise
+
+        await conn.run_sync(migrate_schema)
+
+
+async def close_db() -> None:
+    """Closes all active connections and disposes the database engine pool."""
+    await engine.dispose()

@@ -17,6 +17,19 @@ from app.models.match_state import MatchStateModel
 logger = logging.getLogger(__name__)
 
 
+def _strip_progression_from_players(players: Optional[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
+    """Guarantees session-only progression (XP, coins, level) is never written or loaded from DB."""
+    if not players:
+        return []
+    clean = []
+    for p in players:
+        if isinstance(p, dict):
+            clean.append({k: v for k, v in p.items() if k != "progression"})
+        else:
+            clean.append(p)
+    return clean
+
+
 class MatchPersistence:
     @staticmethod
     async def save_lobby_state(
@@ -30,6 +43,7 @@ class MatchPersistence:
         """
         code = room_code.upper().strip()
         config = config or {}
+        clean_players = _strip_progression_from_players(players)
         try:
             async with AsyncSessionLocal() as session:
                 stmt = select(MatchStateModel).where(MatchStateModel.room_code == code)
@@ -41,7 +55,7 @@ class MatchPersistence:
                         room_code=code,
                         host_sid=host_sid,
                         phase="lobby",
-                        players=players,
+                        players=clean_players,
                         mode=config.get("mode", "classic"),
                         category=config.get("category", "Random"),
                         difficulty=config.get("difficulty", "medium"),
@@ -51,7 +65,7 @@ class MatchPersistence:
                 else:
                     record.host_sid = host_sid
                     record.phase = record.phase if record.phase != "ended" else "lobby"
-                    record.players = players
+                    record.players = clean_players
                     if config:
                         record.mode = config.get("mode", record.mode)
                         record.category = config.get("category", record.category)
@@ -74,6 +88,7 @@ class MatchPersistence:
         Includes clues, turn order, round, phase, votes, and protected secrets.
         """
         code = room_code.upper().strip()
+        clean_players = _strip_progression_from_players(players) if players is not None else None
         try:
             async with AsyncSessionLocal() as session:
                 stmt = select(MatchStateModel).where(MatchStateModel.room_code == code)
@@ -99,7 +114,7 @@ class MatchPersistence:
                         current_round=match_state.get("current_round", 1),
                         current_turn_sid=current_turn_sid,
                         current_turn_index=turn_idx,
-                        players=players or [],
+                        players=clean_players or [],
                         turn_order=turn_order,
                         clues=match_state.get("clues", []),
                         votes=match_state.get("votes", {}),
@@ -121,8 +136,8 @@ class MatchPersistence:
                     record.current_round = match_state.get("current_round", record.current_round)
                     record.current_turn_sid = current_turn_sid
                     record.current_turn_index = turn_idx
-                    if players is not None:
-                        record.players = players
+                    if clean_players is not None:
+                        record.players = clean_players
                     record.turn_order = turn_order
                     record.clues = match_state.get("clues", [])
                     record.votes = match_state.get("votes", {})
@@ -179,7 +194,7 @@ class MatchPersistence:
                     "room_code": record.room_code,
                     "host_sid": record.host_sid,
                     "phase": record.phase,
-                    "players": record.players or [],
+                    "players": _strip_progression_from_players(record.players or []),
                     "max_players": 12,
                     "allow_bots": True,
                 }

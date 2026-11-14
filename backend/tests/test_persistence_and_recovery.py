@@ -15,7 +15,7 @@ import sys
 # Ensure backend root is on sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.database import init_db, AsyncSessionLocal
+from app.database import AsyncSessionLocal
 from app.models.match_state import MatchStateModel
 from app.game.persistence import match_persistence
 from ml.word_intelligence import word_intelligence
@@ -23,14 +23,13 @@ from ml.player_behavior import player_behavior_model
 
 
 @pytest.mark.asyncio
-async def test_db_init_and_match_state_table():
+async def test_db_init_and_match_state_table(setup_db):
     """Ensure database tables initialize properly."""
-    await init_db()
     assert True
 
 
 @pytest.mark.asyncio
-async def test_match_state_persistence_and_recovery():
+async def test_match_state_persistence_and_recovery(setup_db):
     """
     Test saving an active match and recovering it exactly as if
     the server restarted / dyno cold-started.
