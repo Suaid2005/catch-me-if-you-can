@@ -339,9 +339,10 @@ export default function HomePage() {
     setError("");
     try {
       const res = await authApi.verifyEmailOtp(registrationToken, emailOtp.trim());
-      if (res.is_active && res.tokens && res.user) {
+      const authenticatedUser = res.tokens?.user || res.user;
+      if (res.is_active && res.tokens && authenticatedUser) {
         localStorage.removeItem("catchme_pending_registration");
-        setAuth(res.user, res.tokens.access_token, res.tokens.refresh_token);
+        setAuth(authenticatedUser, res.tokens.access_token, res.tokens.refresh_token);
         sound.playVictory();
         setActiveModal(null);
       } else {
@@ -363,9 +364,10 @@ export default function HomePage() {
     setError("");
     try {
       const res = await authApi.verifyPhoneOtp(registrationToken, phoneOtp.trim());
-      if (res.is_active && res.tokens && res.user) {
+      const authenticatedUser = res.tokens?.user || res.user;
+      if (res.is_active && res.tokens && authenticatedUser) {
         localStorage.removeItem("catchme_pending_registration");
-        setAuth(res.user, res.tokens.access_token, res.tokens.refresh_token);
+        setAuth(authenticatedUser, res.tokens.access_token, res.tokens.refresh_token);
         sound.playVictory();
         setActiveModal(null);
       } else if (!res.email_verified) {

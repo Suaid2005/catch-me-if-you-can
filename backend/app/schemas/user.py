@@ -257,6 +257,7 @@ class VerificationStatusResponse(BaseModel):
     dev_email_otp: str | None = None
     dev_phone_otp: str | None = None
     tokens: TokenResponse | None = None
+    user: UserPublic | None = None
 
 
 class RefreshTokenRequest(BaseModel):

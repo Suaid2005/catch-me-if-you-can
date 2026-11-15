@@ -494,6 +494,7 @@ async def verify_register_email(
         is_active=user.is_active,
         message="Email verified successfully!" if not tokens else "Account fully activated! Welcome Detective.",
         tokens=tokens,
+        user=UserPublic.model_validate(user),
     )
 
 
@@ -507,58 +508,63 @@ async def verify_register_phone(
     now = datetime.now(timezone.utc)
 
     if not user.phone_verified:
-        result = await db.execute(
-            select(OtpChallenge)
-            .where(
-                OtpChallenge.user_id == user.id,
-                OtpChallenge.channel == "phone",
-                OtpChallenge.purpose == "register_phone",
-                OtpChallenge.used == False,
+        # If SMS provider is not configured on production infrastructure, auto-verify phone so detective is never blocked
+        if not notification_service.is_sms_configured() and not settings.is_development:
+            user.phone_verified = True
+            logger.info("[AUTH] SMS unconfigured in production: auto-verified phone for user '%s'", user.username)
+        else:
+            result = await db.execute(
+                select(OtpChallenge)
+                .where(
+                    OtpChallenge.user_id == user.id,
+                    OtpChallenge.channel == "phone",
+                    OtpChallenge.purpose == "register_phone",
+                    OtpChallenge.used == False,
+                )
+                .order_by(OtpChallenge.created_at.desc())
             )
-            .order_by(OtpChallenge.created_at.desc())
-        )
-        challenge = result.scalar_one_or_none()
+            challenge = result.scalar_one_or_none()
 
-        if not challenge:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No pending phone verification code found. Please request a new code.",
-            )
+            if not challenge:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No pending phone verification code found. Please request a new code.",
+                )
 
-        if now > ensure_utc(challenge.expires_at):
-            challenge.used = True
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Verification code has expired. Please request a new one.",
-            )
-
-        if challenge.attempts >= challenge.max_attempts:
-            challenge.used = True
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many incorrect attempts. Please request a new verification code.",
-            )
-
-        expected_hash = hash_otp(user.phone_number, payload.otp)
-        if challenge.otp_hash != expected_hash:
-            challenge.attempts += 1
-            remaining = challenge.max_attempts - challenge.attempts
-            if remaining <= 0:
+            if now > ensure_utc(challenge.expires_at):
                 challenge.used = True
-            await db.commit()
-            if remaining <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Verification code has expired. Please request a new one.",
+                )
+
+            if challenge.attempts >= challenge.max_attempts:
+                challenge.used = True
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Too many incorrect attempts. This code has been invalidated.",
+                    detail="Too many incorrect attempts. Please request a new verification code.",
                 )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid verification code. {remaining} attempt(s) remaining.",
-            )
 
-        challenge.used = True
-        user.phone_verified = True
-        logger.info("[AUTH] Phone number verified successfully for user '%s'", user.username)
+            expected_hash = hash_otp(user.phone_number, payload.otp)
+            if challenge.otp_hash != expected_hash:
+                challenge.attempts += 1
+                remaining = challenge.max_attempts - challenge.attempts
+                if remaining <= 0:
+                    challenge.used = True
+                await db.commit()
+                if remaining <= 0:
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail="Too many incorrect attempts. This code has been invalidated.",
+                    )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid verification code. {remaining} attempt(s) remaining.",
+                )
+
+            challenge.used = True
+            user.phone_verified = True
+            logger.info("[AUTH] Phone number verified successfully for user '%s'", user.username)
 
     # Check for complete dual verification & account activation
     tokens: TokenResponse | None = None
@@ -585,6 +591,7 @@ async def verify_register_phone(
         is_active=user.is_active,
         message="Phone verified successfully!" if not tokens else "Account fully activated! Welcome Detective.",
         tokens=tokens,
+        user=UserPublic.model_validate(user),
     )
 
 
@@ -654,16 +661,25 @@ async def resend_register_otp(
         delivered = await notification_service.send_email_otp(user.email, new_otp, purpose="registration")
         is_cfg = notification_service.is_email_configured()
     else:
-        delivered = await notification_service.send_phone_otp(user.phone_number, new_otp, purpose="registration")
-        is_cfg = notification_service.is_sms_configured()
+        is_sms_cfg = notification_service.is_sms_configured()
+        is_email_cfg = notification_service.is_email_configured()
+        if is_sms_cfg:
+            delivered = await notification_service.send_phone_otp(user.phone_number, new_otp, purpose="registration")
+            is_cfg = True
+        elif is_email_cfg:
+            # Fall back to user's registered email on zero-cost infrastructure
+            delivered = await notification_service.send_email_otp(user.email, new_otp, purpose="registration")
+            is_cfg = True
+        else:
+            is_cfg = False
 
     logger.info("[AUTH] Resent %s verification code for user '%s' (delivered=%s)", payload.channel, user.username, delivered)
 
     dev_otp = new_otp if (settings.is_development or not is_cfg or not delivered) else None
     msg = (
         f"A new verification code has been dispatched to your {payload.channel}."
-        if delivered
-        else f"Verification code generated (Simulation mode: {payload.channel} service unconfigured)."
+        if (delivered and (payload.channel == "email" or notification_service.is_sms_configured()))
+        else ("A new verification code has been dispatched to your registered email." if delivered else f"Verification code generated (Simulation mode: {payload.channel} service unconfigured).")
     )
 
     return {
@@ -860,6 +876,19 @@ async def login(
 
     # If the user is unverified and not a legacy account, block access and provide resumption token
     if not user.is_active and not user.is_legacy:
+        # If email was verified and SMS provider is unconfigured on production server, auto-activate seamlessly
+        if user.email_verified and not notification_service.is_sms_configured() and not settings.is_development:
+            user.phone_verified = True
+            user.is_active = True
+            await db.commit()
+            access_token = create_access_token({"sub": user.id})
+            refresh_token = await issue_refresh_token(user.id, db)
+            return TokenResponse(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                user=UserPublic.model_validate(user),
+            )
+
         reg_token = create_registration_token(user.id)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

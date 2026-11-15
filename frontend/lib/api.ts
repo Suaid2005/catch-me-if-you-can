@@ -203,6 +203,7 @@ export interface VerificationStatusResponse {
   dev_email_otp?: string | null;
   dev_phone_otp?: string | null;
   tokens?: TokenResponse | null;
+  user?: AuthUser | null;
 }
 
 export interface ForgotPasswordResponse {
