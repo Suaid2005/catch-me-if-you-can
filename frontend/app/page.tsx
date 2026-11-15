@@ -446,13 +446,13 @@ export default function HomePage() {
     setRecoverySuccessMsg("");
 
     try {
-      const identifier = recoveryChannel === "email" ? recoveryEmail.trim() : recoveryPhone.trim();
-      if (!identifier) {
-        setError(recoveryChannel === "email" ? "Please enter your registered email" : "Please enter your registered phone number");
+      const email = recoveryEmail.trim();
+      if (!email) {
+        setError("Please enter your registered email");
         setLoading(false);
         return;
       }
-      const res = await authApi.recoverUsername({ channel: recoveryChannel, identifier });
+      const res = await authApi.recoverUsername({ channel: "email", identifier: email });
       setRecoverySuccessMsg(res.message);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Recovery request failed");
@@ -469,15 +469,15 @@ export default function HomePage() {
     setRecoverySuccessMsg("");
 
     try {
-      const identifier = recoveryChannel === "email" ? recoveryEmail.trim() : recoveryPhone.trim();
-      if (!identifier) {
-        setError(recoveryChannel === "email" ? "Please enter your registered email" : "Please enter your registered phone number");
+      const email = recoveryEmail.trim();
+      if (!email) {
+        setError("Please enter your registered email");
         setLoading(false);
         return;
       }
-      const res = await authApi.forgotPassword({ channel: recoveryChannel, identifier });
+      const res = await authApi.forgotPassword({ channel: "email", identifier: email });
       setRecoveryChallengeId(res.challenge_id);
-      setRecoveryTargetMasked(res.target_masked);
+      setRecoveryTargetMasked(res.target_masked || email);
       setRecoverySuccessMsg(res.message);
       setRecoveryOtp("");
       setAuthMode("forgot_password_otp");
@@ -1497,34 +1497,8 @@ export default function HomePage() {
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  Enter your registered email address or phone number to receive your detective codename.
+                  Enter your registered email address to receive your detective codename in your inbox.
                 </p>
-
-                {/* Channel Selector */}
-                <div className="grid grid-cols-2 gap-2 bg-slate-900 p-1 rounded-xl border border-gray-800">
-                  <button
-                    type="button"
-                    onClick={() => { setRecoveryChannel("email"); setError(""); }}
-                    className={`py-1.5 text-xs font-bold rounded-lg transition-colors ${
-                      recoveryChannel === "email"
-                        ? "bg-purple-600 text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Via Email
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setRecoveryChannel("phone"); setError(""); }}
-                    className={`py-1.5 text-xs font-bold rounded-lg transition-colors ${
-                      recoveryChannel === "phone"
-                        ? "bg-purple-600 text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Via SMS
-                  </button>
-                </div>
 
                 {recoverySuccessMsg ? (
                   <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/60 text-xs text-emerald-300 font-medium">
@@ -1532,34 +1506,19 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <form onSubmit={handleRecoverUsername} className="space-y-3">
-                    {recoveryChannel === "email" ? (
-                      <div>
-                        <label className="block text-xs font-bold text-gray-300 uppercase mb-1">
-                          Registered Email
-                        </label>
-                        <input
-                          type="email"
-                          required
-                          placeholder="alex@detective.agency"
-                          value={recoveryEmail}
-                          onChange={(e) => setRecoveryEmail(e.target.value)}
-                          className="w-full bg-slate-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
-                        />
-                      </div>
-                    ) : (
-                      <div>
-                        <label className="block text-xs font-bold text-gray-300 uppercase mb-1">
-                          Registered Phone Number
-                        </label>
-                        <CountryPhoneInput
-                          value={recoveryPhone}
-                          onChange={(e164, isValid) => {
-                            setRecoveryPhone(e164);
-                            setIsRecoveryPhoneValid(isValid);
-                          }}
-                        />
-                      </div>
-                    )}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-300 uppercase mb-1">
+                        Registered Email
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="alex@detective.agency"
+                        value={recoveryEmail}
+                        onChange={(e) => setRecoveryEmail(e.target.value)}
+                        className="w-full bg-slate-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
+                      />
+                    </div>
 
                     {error && (
                       <div className="text-xs font-bold text-rose-400 bg-rose-950/50 border border-rose-800 rounded-lg p-2.5">
@@ -1572,14 +1531,14 @@ export default function HomePage() {
                       disabled={loading}
                       className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50"
                     >
-                      {loading ? "Searching Registry..." : "Recover Codename →"}
+                      {loading ? "Searching Registry..." : "Send Codename to Email →"}
                     </button>
                   </form>
                 )}
               </div>
             )}
 
-            {/* 6. FORGOT PASSWORD FLOW (Step 1: Choose Email or Phone Channel) */}
+            {/* 6. FORGOT PASSWORD FLOW (Email Channel) */}
             {authMode === "forgot_password" && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -1597,64 +1556,23 @@ export default function HomePage() {
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  Choose whether to receive a 6-digit recovery OTP via email or SMS to reset your account password.
+                  Enter your registered email address to receive a secure 6-digit recovery OTP in your inbox.
                 </p>
 
-                {/* Channel Selector */}
-                <div className="grid grid-cols-2 gap-2 bg-slate-900 p-1 rounded-xl border border-gray-800">
-                  <button
-                    type="button"
-                    onClick={() => { setRecoveryChannel("email"); setError(""); }}
-                    className={`py-1.5 text-xs font-bold rounded-lg transition-colors ${
-                      recoveryChannel === "email"
-                        ? "bg-purple-600 text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Via Email
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setRecoveryChannel("phone"); setError(""); }}
-                    className={`py-1.5 text-xs font-bold rounded-lg transition-colors ${
-                      recoveryChannel === "phone"
-                        ? "bg-purple-600 text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Via SMS
-                  </button>
-                </div>
-
                 <form onSubmit={handleForgotPassword} className="space-y-3">
-                  {recoveryChannel === "email" ? (
-                    <div>
-                      <label className="block text-xs font-bold text-gray-300 uppercase mb-1">
-                        Registered Email
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="alex@detective.agency"
-                        value={recoveryEmail}
-                        onChange={(e) => setRecoveryEmail(e.target.value)}
-                        className="w-full bg-slate-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="block text-xs font-bold text-gray-300 uppercase mb-1">
-                        Registered Phone Number
-                      </label>
-                      <CountryPhoneInput
-                        value={recoveryPhone}
-                        onChange={(e164, isValid) => {
-                          setRecoveryPhone(e164);
-                          setIsRecoveryPhoneValid(isValid);
-                        }}
-                      />
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-300 uppercase mb-1">
+                      Registered Email
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="alex@detective.agency"
+                      value={recoveryEmail}
+                      onChange={(e) => setRecoveryEmail(e.target.value)}
+                      className="w-full bg-slate-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
+                    />
+                  </div>
 
                   {error && (
                     <div className="text-xs font-bold text-rose-400 bg-rose-950/50 border border-rose-800 rounded-lg p-2.5">
@@ -1667,7 +1585,7 @@ export default function HomePage() {
                     disabled={loading}
                     className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50"
                   >
-                    {loading ? "Generating OTP..." : "Send Verification Code →"}
+                    {loading ? "Sending OTP..." : "Send Recovery Code to Email →"}
                   </button>
 
                   <div className="text-center pt-2">
