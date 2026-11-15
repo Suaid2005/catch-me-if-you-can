@@ -1049,6 +1049,13 @@ async def recover_username(
     client_ip = request.client.host if request.client else "unknown"
     _check_rate_limit(f"rec_usr_{client_ip}", max_requests=5, window_minutes=15)
 
+    is_cfg = notification_service.is_email_configured() if payload.channel == "email" else notification_service.is_sms_configured()
+    if not is_cfg and not settings.is_development:
+        provider_name = "Email (Resend/SMTP)" if payload.channel == "email" else "SMS (Twilio)"
+        return MessageResponse(
+            message=f"Notice: {provider_name} dispatch service is not configured on this server. Please add your credentials in Render environment settings."
+        )
+
     identifier = payload.identifier.strip()
     generic_msg = (
         "If an active detective account is associated with this contact method, "
@@ -1170,6 +1177,14 @@ async def forgot_password_request_otp(
     logger.info("[AUTH RECOVERY] Dispatched password reset OTP via %s for user '%s' (sent=%s)", payload.channel, user.username, sent)
 
     dev_otp = otp if (settings.is_development or not is_cfg or not sent) else None
+
+    # If the provider is not configured on production infrastructure, inform the user honestly
+    if not is_cfg and not settings.is_development:
+        provider_name = "Email (Resend/SMTP)" if payload.channel == "email" else "SMS (Twilio)"
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"{provider_name} delivery service is not configured on this server. Please configure your credentials in Render environment settings."
+        )
 
     return ForgotPasswordResponse(
         message=generic_msg,

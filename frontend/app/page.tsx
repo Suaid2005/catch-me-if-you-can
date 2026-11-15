@@ -1495,8 +1495,34 @@ export default function HomePage() {
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  Enter your registered email address to receive your detective codename in your inbox.
+                  Enter your registered email address or phone number to receive your detective codename.
                 </p>
+
+                {/* Channel Selector */}
+                <div className="grid grid-cols-2 gap-2 bg-slate-900 p-1 rounded-xl border border-gray-800">
+                  <button
+                    type="button"
+                    onClick={() => { setRecoveryChannel("email"); setError(""); }}
+                    className={`py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                      recoveryChannel === "email"
+                        ? "bg-purple-600 text-white"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Via Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setRecoveryChannel("phone"); setError(""); }}
+                    className={`py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                      recoveryChannel === "phone"
+                        ? "bg-purple-600 text-white"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Via SMS
+                  </button>
+                </div>
 
                 {recoverySuccessMsg ? (
                   <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/60 text-xs text-emerald-300 font-medium">
@@ -1504,19 +1530,34 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <form onSubmit={handleRecoverUsername} className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-300 uppercase mb-1">
-                        Registered Email
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="alex@detective.agency"
-                        value={recoveryEmail}
-                        onChange={(e) => setRecoveryEmail(e.target.value)}
-                        className="w-full bg-slate-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
-                      />
-                    </div>
+                    {recoveryChannel === "email" ? (
+                      <div>
+                        <label className="block text-xs font-bold text-gray-300 uppercase mb-1">
+                          Registered Email
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          placeholder="alex@detective.agency"
+                          value={recoveryEmail}
+                          onChange={(e) => setRecoveryEmail(e.target.value)}
+                          className="w-full bg-slate-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-xs font-bold text-gray-300 uppercase mb-1">
+                          Registered Phone Number
+                        </label>
+                        <CountryPhoneInput
+                          value={recoveryPhone}
+                          onChange={(e164, isValid) => {
+                            setRecoveryPhone(e164);
+                            setIsRecoveryPhoneValid(isValid);
+                          }}
+                        />
+                      </div>
+                    )}
 
                     {error && (
                       <div className="text-xs font-bold text-rose-400 bg-rose-950/50 border border-rose-800 rounded-lg p-2.5">
@@ -1554,23 +1595,64 @@ export default function HomePage() {
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  Enter your registered email address to receive a 6-digit recovery code to reset your account password.
+                  Choose whether to receive a 6-digit recovery OTP via email or SMS to reset your account password.
                 </p>
 
+                {/* Channel Selector */}
+                <div className="grid grid-cols-2 gap-2 bg-slate-900 p-1 rounded-xl border border-gray-800">
+                  <button
+                    type="button"
+                    onClick={() => { setRecoveryChannel("email"); setError(""); }}
+                    className={`py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                      recoveryChannel === "email"
+                        ? "bg-purple-600 text-white"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Via Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setRecoveryChannel("phone"); setError(""); }}
+                    className={`py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                      recoveryChannel === "phone"
+                        ? "bg-purple-600 text-white"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Via SMS
+                  </button>
+                </div>
+
                 <form onSubmit={handleForgotPassword} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 uppercase mb-1">
-                      Registered Email
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="alex@detective.agency"
-                      value={recoveryEmail}
-                      onChange={(e) => setRecoveryEmail(e.target.value)}
-                      className="w-full bg-slate-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
-                    />
-                  </div>
+                  {recoveryChannel === "email" ? (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-300 uppercase mb-1">
+                        Registered Email
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="alex@detective.agency"
+                        value={recoveryEmail}
+                        onChange={(e) => setRecoveryEmail(e.target.value)}
+                        className="w-full bg-slate-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-300 uppercase mb-1">
+                        Registered Phone Number
+                      </label>
+                      <CountryPhoneInput
+                        value={recoveryPhone}
+                        onChange={(e164, isValid) => {
+                          setRecoveryPhone(e164);
+                          setIsRecoveryPhoneValid(isValid);
+                        }}
+                      />
+                    </div>
+                  )}
 
                   {error && (
                     <div className="text-xs font-bold text-rose-400 bg-rose-950/50 border border-rose-800 rounded-lg p-2.5">
