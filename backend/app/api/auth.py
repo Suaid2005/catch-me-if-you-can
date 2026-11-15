@@ -1051,7 +1051,7 @@ async def recover_username(
 
     is_cfg = notification_service.is_email_configured() if payload.channel == "email" else notification_service.is_sms_configured()
     if not is_cfg and not settings.is_development:
-        provider_name = "Email (Resend/SMTP)" if payload.channel == "email" else "SMS (Twilio)"
+        provider_name = "Email (Resend/SMTP)" if payload.channel == "email" else "SMS (Fast2SMS/Twilio)"
         return MessageResponse(
             message=f"Notice: {provider_name} dispatch service is not configured on this server. Please add your credentials in Render environment settings."
         )
@@ -1075,9 +1075,16 @@ async def recover_username(
             logger.info("[AUTH RECOVERY] Sent username recovery email for user '%s'", user.username)
 
     elif payload.channel == "phone":
+        clean = identifier.replace(" ", "").replace("-", "")
+        candidates = {clean}
+        if not clean.startswith("+"):
+            candidates.add(f"+{clean}")
+            candidates.add(f"+91{clean}")
+        if clean.startswith("+91"):
+            candidates.add(clean[3:])
         result = await db.execute(
             select(User).where(
-                User.phone_number == identifier,
+                User.phone_number.in_(candidates),
                 or_(User.is_active == True, User.is_legacy == True),
             )
         )
@@ -1115,9 +1122,16 @@ async def forgot_password_request_otp(
         )
         user = result.scalar_one_or_none()
     elif payload.channel == "phone":
+        clean = identifier.replace(" ", "").replace("-", "")
+        candidates = {clean}
+        if not clean.startswith("+"):
+            candidates.add(f"+{clean}")
+            candidates.add(f"+91{clean}")
+        if clean.startswith("+91"):
+            candidates.add(clean[3:])
         result = await db.execute(
             select(User).where(
-                User.phone_number == identifier,
+                User.phone_number.in_(candidates),
                 or_(User.is_active == True, User.is_legacy == True),
             )
         )
@@ -1180,7 +1194,7 @@ async def forgot_password_request_otp(
 
     # If the provider is not configured on production infrastructure, inform the user honestly
     if not is_cfg and not settings.is_development:
-        provider_name = "Email (Resend/SMTP)" if payload.channel == "email" else "SMS (Twilio)"
+        provider_name = "Email (Resend/SMTP)" if payload.channel == "email" else "SMS (Fast2SMS/Twilio)"
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"{provider_name} delivery service is not configured on this server. Please configure your credentials in Render environment settings."

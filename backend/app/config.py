@@ -44,7 +44,8 @@ class Settings(BaseSettings):
     smtp_from_email: str = "noreply@catchme.game"
     smtp_use_tls: bool = True
 
-    # SMS notification provider settings (Twilio or compatible)
+    # SMS notification provider settings (Fast2SMS or Twilio)
+    fast2sms_api_key: str = ""
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_from_number: str = ""

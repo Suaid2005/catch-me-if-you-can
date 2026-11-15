@@ -8,8 +8,11 @@ Supported free/production providers:
    Env: RESEND_API_KEY, SMTP_FROM_EMAIL
 2. SMTP (Works with Gmail SMTP, Brevo, SendGrid, Mailjet, AWS SES, etc.)
    Env: SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL, SMTP_USE_TLS
-3. Twilio SMS (Phone verification OTPs)
-   Env: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
+3. SMS Providers:
+   - Fast2SMS (Free testing wallet: ₹50 on signup for Indian +91 numbers)
+     Env: FAST2SMS_API_KEY
+   - Twilio SMS (Phone verification OTPs globally)
+     Env: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
 
 Security rules:
 - Never log raw passwords, reset tokens, or OTPs in production logs.
@@ -45,7 +48,9 @@ class NotificationService:
         return False
 
     def is_sms_configured(self) -> bool:
-        """Returns True if Twilio credentials and from_number are configured."""
+        """Returns True if Fast2SMS or Twilio credentials are configured."""
+        if bool(settings.fast2sms_api_key and settings.fast2sms_api_key.strip()):
+            return True
         return bool(
             settings.twilio_account_sid.strip()
             and settings.twilio_auth_token.strip()
@@ -231,7 +236,7 @@ class NotificationService:
         return await self._dispatch_sms(phone_number, body)
 
     async def send_phone_otp(self, phone_number: str, otp: str, purpose: str = "registration") -> bool:
-        """Dispatches a one-time verification code via Twilio SMS."""
+        """Dispatches a one-time verification code via SMS (Fast2SMS or Twilio)."""
         action_name = "verification" if purpose == "registration" else "password reset"
         body = f"[Catch Me If You Can] Your {action_name} code is: {otp}. Valid for 5 minutes."
         return await self._dispatch_sms(phone_number, body)
@@ -252,19 +257,69 @@ class NotificationService:
                 )
                 return False
 
+        if settings.fast2sms_api_key and settings.fast2sms_api_key.strip():
+            return await self._send_fast2sms(phone_number, body)
+
+        return await self._send_twilio_sms(phone_number, body)
+
+    async def _send_fast2sms(self, phone_number: str, body: str) -> bool:
+        """Dispatches an SMS to an Indian (+91) number using Fast2SMS API v2."""
+        # Extract digits from phone number
+        digits = "".join(filter(str.isdigit, phone_number))
+        if len(digits) == 12 and digits.startswith("91"):
+            digits = digits[2:]
+        elif len(digits) > 10:
+            digits = digits[-10:]
+
+        if len(digits) != 10:
+            logger.error("[NOTIFICATION] Fast2SMS requires 10-digit mobile number, received: %s (from %s)", digits, phone_number)
+            return False
+
+        client = await self._get_client()
+        headers = {
+            "authorization": settings.fast2sms_api_key.strip(),
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "route": "q",
+            "message": body,
+            "language": "english",
+            "flash": 0,
+            "numbers": digits,
+        }
+        try:
+            res = await client.post("https://www.fast2sms.com/dev/bulkV2", json=payload, headers=headers)
+            data = res.json() if res.headers.get("content-type", "").startswith("application/json") else {}
+            if res.status_code == 200 and data.get("return") is True:
+                logger.info("[NOTIFICATION] Fast2SMS dispatch success to %s", digits)
+                return True
+            else:
+                logger.error("[NOTIFICATION] Fast2SMS error %d: %s", res.status_code, res.text)
+                return False
+        except Exception as e:
+            logger.error("[NOTIFICATION] Failed to dispatch via Fast2SMS: %s", str(e))
+            return False
+
+    async def _send_twilio_sms(self, phone_number: str, body: str) -> bool:
+        """Dispatches an SMS using Twilio API."""
+        # Ensure E.164 format with leading +
+        formatted_number = phone_number.strip()
+        if not formatted_number.startswith("+"):
+            formatted_number = f"+{formatted_number}"
+
         client = await self._get_client()
         url = f"https://api.twilio.com/2010-04-01/Accounts/{settings.twilio_account_sid}/Messages.json"
         auth = (settings.twilio_account_sid, settings.twilio_auth_token)
         data = {
             "From": settings.twilio_from_number,
-            "To": phone_number,
+            "To": formatted_number,
             "Body": body,
         }
 
         try:
             res = await client.post(url, data=data, auth=auth)
             if res.status_code in (200, 201):
-                logger.info("[NOTIFICATION] Twilio SMS dispatch success to %s", phone_number)
+                logger.info("[NOTIFICATION] Twilio SMS dispatch success to %s", formatted_number)
                 return True
             else:
                 logger.error("[NOTIFICATION] Twilio API error %d: %s", res.status_code, res.text)
