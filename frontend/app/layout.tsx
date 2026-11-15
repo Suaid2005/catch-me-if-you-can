@@ -8,7 +8,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://catch-me-if-you-can-red.vercel.app"),
+  alternates: {
+    canonical: "https://catch-me-if-you-can-red.vercel.app",
+  },
   title: "Catch Me If You Can? 🕵️",
   description:
     "A real-time multiplayer social deduction game. Can you catch the impostor — or stay hidden?",
