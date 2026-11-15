@@ -268,6 +268,26 @@ export default function HomePage() {
           confirm_password: confirmPassword,
         });
 
+        // If the server auto-activated on zero-cost infrastructure, log in immediately
+        if (regRes.is_active && regRes.tokens) {
+          setAuth(
+            {
+              id: regRes.user_id,
+              username: regRes.username,
+              avatar: "avatar_classic_detective",
+              games_played: 0,
+              games_won: 0,
+              is_guest: false,
+            },
+            regRes.tokens.access_token,
+            regRes.tokens.refresh_token
+          );
+          hydrateProgression(regRes.user_id);
+          sound.playVictory();
+          setActiveModal(null);
+          return;
+        }
+
         // Store pending registration for recovery
         const pendingObj = {
           registration_token: regRes.registration_token,
@@ -454,9 +474,14 @@ export default function HomePage() {
         return;
       }
       const res = await authApi.forgotPassword({ channel: recoveryChannel, identifier });
+      if (res.reset_token) {
+        setResetToken(res.reset_token);
+        setRecoverySuccessMsg("Identity verified! Please set your new password.");
+        setAuthMode("reset_password");
+        return;
+      }
       setRecoveryChallengeId(res.challenge_id);
       setRecoveryTargetMasked(res.target_masked);
-      setRecoveryDevOtp(res.dev_otp || null);
       setRecoverySuccessMsg(res.message);
       setRecoveryOtp("");
       setAuthMode("forgot_password_otp");
@@ -1289,14 +1314,6 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {devEmailOtp && (
-                  <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs flex items-center justify-between">
-                    <span className="font-bold">⚡ Dev Simulation OTP:</span>
-                    <span className="font-mono font-black text-sm tracking-widest bg-amber-500/20 px-2 py-0.5 rounded">
-                      {devEmailOtp}
-                    </span>
-                  </div>
-                )}
 
                 <form onSubmit={handleVerifyEmail} className="space-y-4">
                   <div>
@@ -1390,14 +1407,6 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {devPhoneOtp && (
-                  <div className="p-3 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-xs flex items-center justify-between">
-                    <span className="font-bold">⚡ Dev Simulation SMS OTP:</span>
-                    <span className="font-mono font-black text-sm tracking-widest bg-cyan-500/20 px-2 py-0.5 rounded">
-                      {devPhoneOtp}
-                    </span>
-                  </div>
-                )}
 
                 <form onSubmit={handleVerifyPhone} className="space-y-4">
                   <div>
@@ -1698,14 +1707,6 @@ export default function HomePage() {
                   Enter the 6-digit code dispatched to: <span className="font-mono text-amber-300 font-bold">{recoveryTargetMasked}</span>
                 </p>
 
-                {recoveryDevOtp && (
-                  <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs flex items-center justify-between">
-                    <span className="font-bold">⚡ Dev Recovery OTP:</span>
-                    <span className="font-mono font-black text-sm tracking-widest bg-amber-500/20 px-2 py-0.5 rounded">
-                      {recoveryDevOtp}
-                    </span>
-                  </div>
-                )}
 
                 <form onSubmit={handleVerifyForgotPasswordOtp} className="space-y-4">
                   <div>

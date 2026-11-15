@@ -95,6 +95,7 @@ class RegisterResponse(BaseModel):
     email_delivered: bool = False
     sms_delivered: bool = False
     provider_configured: bool = False
+    tokens: dict | None = None
 
 
 class VerifyEmailOtpRequest(BaseModel):
@@ -161,6 +162,7 @@ class ForgotPasswordResponse(BaseModel):
     challenge_id: str | None = None
     channel: str
     dev_otp: str | None = None
+    reset_token: str | None = None
 
 
 class VerifyForgotPasswordOtpRequest(BaseModel):

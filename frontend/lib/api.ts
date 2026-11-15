@@ -161,6 +161,7 @@ export interface RegisterResponse {
   phone_verified: boolean;
   dev_email_otp?: string | null;
   dev_phone_otp?: string | null;
+  tokens?: TokenResponse | null;
 }
 
 export interface VerificationResponse {
@@ -210,6 +211,7 @@ export interface ForgotPasswordResponse {
   channel: string;
   target_masked: string;
   dev_otp?: string | null;
+  reset_token?: string | null;
 }
 
 export interface VerifyForgotPasswordResponse {

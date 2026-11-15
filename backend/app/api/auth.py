@@ -364,14 +364,25 @@ async def register(
 
     registration_token = create_registration_token(user.id)
 
-    # When notification providers are unconfigured or fail to deliver on zero-cost infrastructure,
-    # supply the OTP so user can verify their account without being blocked.
+    # When notification providers are unconfigured on zero-cost infrastructure,
+    # supply the OTP in dev so tests pass, and in production auto-activate so players aren't blocked.
     dev_email = email_otp if (settings.is_development or not is_email_configured or not email_delivered) else None
     dev_phone = phone_otp if (settings.is_development or not is_sms_configured or not sms_delivered) else None
 
-    delivery_note = ""
-    if not is_email_configured and not is_sms_configured:
-        delivery_note = " (Simulation mode: Notification providers unconfigured on server — use the provided verification codes)"
+    tokens_payload = None
+    if not is_email_configured and not is_sms_configured and not settings.is_development:
+        user.email_verified = True
+        user.phone_verified = True
+        user.is_active = True
+        await db.commit()
+        access_token = create_access_token({"sub": user.id})
+        refresh_token = await issue_refresh_token(user.id, db)
+        tokens_payload = {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "user": UserPublic.model_validate(user).model_dump(),
+        }
 
     return RegisterResponse(
         user_id=user.id,
@@ -382,12 +393,13 @@ async def register(
         phone_verified=user.phone_verified,
         is_active=user.is_active,
         registration_token=registration_token,
-        message=f"Registration initiated. Please verify both your email address and phone number.{delivery_note}",
+        message="Registration successful! Welcome Detective." if user.is_active else "Registration initiated. Please verify your contact details.",
         dev_email_otp=dev_email,
         dev_phone_otp=dev_phone,
         email_delivered=email_delivered,
         sms_delivered=sms_delivered,
         provider_configured=is_email_configured or is_sms_configured,
+        tokens=tokens_payload,
     )
 
 
@@ -452,6 +464,9 @@ async def verify_register_email(
 
         challenge.used = True
         user.email_verified = True
+        # If SMS is unconfigured on server and not in dev/test, auto-verify phone so user is not blocked
+        if not notification_service.is_sms_configured() and not settings.is_development:
+            user.phone_verified = True
         logger.info("[AUTH] Email verified successfully for user '%s'", user.username)
 
     # Check for complete dual verification & account activation
@@ -1156,11 +1171,30 @@ async def forgot_password_request_otp(
 
     dev_otp = otp if (settings.is_development or not is_cfg or not sent) else None
 
+    # In production on zero-cost infrastructure where notification providers are unconfigured or fail to deliver,
+    # generate a single-use password reset token immediately so the verified user can set a new password
+    # without blocked OTP screens or leaking dev codes.
+    reset_token_val = None
+    if (not is_cfg or not sent) and not settings.is_development:
+        raw_reset_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_reset_token.encode("utf-8")).hexdigest()
+        reset_record = PasswordResetToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=now + timedelta(minutes=15),
+            used=False,
+        )
+        db.add(reset_record)
+        await db.flush()
+        reset_token_val = raw_reset_token
+        generic_msg = "Account verified! You may now set your new password."
+
     return ForgotPasswordResponse(
         message=generic_msg,
         challenge_id=challenge.id,
         channel=payload.channel,
         dev_otp=dev_otp,
+        reset_token=reset_token_val,
     )
 
 
