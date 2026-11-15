@@ -218,9 +218,12 @@ class SecretWordEngine:
             sid = p["sid"]
             is_impostor = sid in impostor_sids
 
-            team = None
             if mode == "team_battle":
                 team = "Red Team" if (idx % 2 == 0) else "Blue Team"
+            elif is_impostor:
+                team = "impostor"
+            else:
+                team = "innocents"
 
             if is_impostor:
                 if mode == "undercover":

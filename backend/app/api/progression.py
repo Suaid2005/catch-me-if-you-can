@@ -19,7 +19,9 @@ from app.schemas.progression import (
     EquipAvatarRequest,
     PurchaseCosmeticRequest,
     EquipCosmeticRequest,
+    PracticeMatchCompleteRequest,
 )
+from app.game.progression import calculate_match_rewards
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -219,6 +221,55 @@ async def equip_cosmetic(
         item_id,
     )
 
+    return current_user
+
+
+@router.post("/practice-complete", response_model=ProgressionResponse)
+async def complete_practice_match(
+    payload: PracticeMatchCompleteRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Authoritatively awards progression for completed Practice vs AI matches.
+    Calculates XP & Coins server-side based on match results and increments lifetime stats.
+    """
+    _ensure_progression_defaults(current_user)
+
+    # Server-side authoritative reward calculation
+    rewards = calculate_match_rewards(
+        won=payload.won,
+        role=payload.role,
+        was_impostor=payload.was_impostor,
+        guessed_word_correctly=payload.guessed_word_correctly,
+        rounds_survived=payload.rounds_survived,
+    )
+    xp_earned = int(rewards["xp_earned"])
+    coins_earned = int(rewards["coins_earned"])
+
+    # Update balance & lifetime statistics
+    current_user.xp += xp_earned
+    current_user.coins += coins_earned
+    current_user.level = max(1, (current_user.xp // 250) + 1)
+    current_user.games_played = (current_user.games_played or 0) + 1
+    if payload.won:
+        current_user.games_won = (current_user.games_won or 0) + 1
+    if payload.was_impostor:
+        if payload.won:
+            current_user.times_escaped = (current_user.times_escaped or 0) + 1
+        else:
+            current_user.times_caught = (current_user.times_caught or 0) + 1
+
+    await db.flush()
+    logger.info(
+        "[PRACTICE REWARDS] Awarded user '%s' +%d XP, +%d Coins (Total XP: %d, Coins: %d, Level: %d)",
+        current_user.username,
+        xp_earned,
+        coins_earned,
+        current_user.xp,
+        current_user.coins,
+        current_user.level,
+    )
     return current_user
 
 

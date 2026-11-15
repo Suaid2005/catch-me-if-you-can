@@ -410,6 +410,19 @@ export const progressionApi = {
       body: JSON.stringify({ item_type: type, item_id: itemId }),
     }),
 
+  recordPracticeMatch: (payload: {
+    won: boolean;
+    role?: string;
+    was_impostor?: boolean;
+    guessed_word_correctly?: boolean;
+    rounds_survived?: number;
+    difficulty?: string;
+  }) =>
+    apiFetch<ServerProgression>("/api/progression/practice-complete", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
   /**
    * @deprecated Server-authoritative match rewards are awarded exclusively by the backend during match finalization.
    */

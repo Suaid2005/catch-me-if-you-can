@@ -61,3 +61,13 @@ class RewardSyncRequest(BaseModel):
     xp_earned: int = Field(ge=0, le=100000)
     coins_earned: int = Field(ge=0, le=100000)
 
+
+class PracticeMatchCompleteRequest(BaseModel):
+    won: bool
+    role: str = Field(default="civilian", max_length=32)
+    was_impostor: bool = False
+    guessed_word_correctly: bool = False
+    rounds_survived: int = Field(default=0, ge=0, le=10)
+    difficulty: str = Field(default="easy", max_length=16)
+
+

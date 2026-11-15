@@ -1116,3 +1116,100 @@ async def test_only_one_timeout_task_exists_per_room(setup_db):
     active_matches.pop(room_code, None)
 
 
+@pytest.mark.asyncio
+async def test_practice_match_complete_authoritative(client, setup_db):
+    """
+    Verifies that Practice vs AI match completion endpoint authoritatively awards XP & coins,
+    updates level, and increments lifetime games_played and games_won in the database.
+    """
+    user_auth = await register_and_activate(client, f"practice_hero_{uuid.uuid4().hex[:6]}", f"p_{uuid.uuid4().hex[:6]}@test.com", "Password123!")
+    user_id = user_auth["user"]["id"]
+    token = user_auth["access_token"]
+
+    # 1. Complete a won practice match as civilian
+    headers = {"Authorization": f"Bearer {token}"}
+    res = await client.post(
+        "/api/progression/practice-complete",
+        headers=headers,
+        json={"won": True, "role": "civilian", "was_impostor": False, "difficulty": "easy"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["xp"] == 100 + 150 + 75  # base 100 + win 150 + innocent win 75 = 325
+    assert data["coins"] == 150 + 30 + 50 + 25  # initial 150 + base 30 + win 50 + innocent 25 = 255
+    assert data["level"] == 2  # 325 // 250 + 1 = 2
+
+    # Verify lifetime stats persisted in database
+    async with AsyncSessionLocal() as session:
+        db_user = (await session.execute(select(User).where(User.id == user_id))).scalar_one()
+        assert db_user.games_played == 1
+        assert db_user.games_won == 1
+        assert db_user.xp == 325
+        assert db_user.coins == 255
+
+
+@pytest.mark.asyncio
+async def test_multiplayer_rewards_with_team_fix(client, setup_db):
+    """
+    Verifies that multiplayer match finalization properly calculates and persists
+    rewards for human players without being dropped by unverified team guards.
+    """
+    u1 = await register_and_activate(client, f"innocent_{uuid.uuid4().hex[:6]}", f"in_{uuid.uuid4().hex[:6]}@test.com", "Password123!")
+    u2 = await register_and_activate(client, f"impostor_{uuid.uuid4().hex[:6]}", f"imp_{uuid.uuid4().hex[:6]}@test.com", "Password123!")
+
+    room_code = f"FIX{uuid.uuid4().hex[:3].upper()}"
+    match_id = f"match_fix_{uuid.uuid4().hex[:6]}"
+
+    # Setup room in room_manager
+    room_manager.create_room(host_sid="sid_1", max_players=4, room_code=room_code)
+    room_manager.add_socket_to_room(room_code=room_code, sid="sid_1", user_id=u1["user"]["id"], username=u1["user"]["username"])
+    room_manager.add_socket_to_room(room_code=room_code, sid="sid_2", user_id=u2["user"]["id"], username=u2["user"]["username"])
+
+    active_matches[room_code] = {
+        "match_id": match_id,
+        "room_code": room_code,
+        "mode": "classic",
+        "secret_word": "SECRET",
+        "undercover_word": "COVER",
+        "player_assignments": {
+            u1["user"]["id"]: {
+                "role": "civilian",
+                "team": "innocents",
+                "is_impostor": False,
+                "secret_word": "SECRET",
+            },
+            u2["user"]["id"]: {
+                "role": "impostor",
+                "team": "impostor",
+                "is_impostor": True,
+                "secret_word": None,
+            },
+        },
+    }
+
+    # Finalize match with Innocents victory
+    cached = await _finalize_match_core(room_code=room_code, winner="innocents", win_reason="Impostor discovered!")
+    assert cached["winner"] == "innocents"
+    assert len(cached["rewards"]) > 0
+
+    # Verify both human players received rewards in the database
+    async with AsyncSessionLocal() as session:
+        user1 = (await session.execute(select(User).where(User.id == u1["user"]["id"]))).scalar_one()
+        user2 = (await session.execute(select(User).where(User.id == u2["user"]["id"]))).scalar_one()
+
+        # User 1 won as innocent: base 100 + win 150 + innocent 75 = 325 XP
+        assert user1.xp == 325
+        assert user1.games_played == 1
+        assert user1.games_won == 1
+
+        # User 2 lost as impostor: base 100 XP, 30 coins
+        assert user2.xp == 100
+        assert user2.games_played == 1
+        assert user2.games_won == 0
+        assert user2.times_caught == 1
+
+    # Cleanup
+    active_matches.pop(room_code, None)
+
+
+

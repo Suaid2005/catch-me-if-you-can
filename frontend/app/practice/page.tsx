@@ -412,7 +412,6 @@ export default function PracticeArenaPage() {
       allPlayers: playerSummaries,
       innocentSuspicionMap,
       onReward: (xp, coins) => {
-        addPracticeRewards(xp, coins);
         rewardedData = { xp, coins };
       },
     });
@@ -425,11 +424,19 @@ export default function PracticeArenaPage() {
       const elim = allPlayers.find((p) => p.id === result.tallyResult?.eliminatedId) || null;
       setEliminatedPlayer(elim);
 
+      const humanWon =
+        (isHumanImpostor && result.tallyResult.winner === "impostor") ||
+        (!isHumanImpostor && result.tallyResult.winner === "innocents");
+
       const rewardInfo = rewardedData as { xp: number; coins: number } | null;
       if (rewardInfo) {
-        const humanWon =
-          (isHumanImpostor && result.tallyResult.winner === "impostor") ||
-          (!isHumanImpostor && result.tallyResult.winner === "innocents");
+        addPracticeRewards(rewardInfo.xp, rewardInfo.coins, {
+          won: humanWon,
+          role: isHumanImpostor ? "impostor" : "civilian",
+          was_impostor: isHumanImpostor,
+          difficulty,
+        });
+
         const correctVote = !isHumanImpostor && selectedSuspect === impostorId;
         const breakdown: Record<string, number> = { base_completion: 75 };
         if (humanWon) {

@@ -92,6 +92,9 @@ class RegisterResponse(BaseModel):
     message: str
     dev_email_otp: str | None = None
     dev_phone_otp: str | None = None
+    email_delivered: bool = False
+    sms_delivered: bool = False
+    provider_configured: bool = False
 
 
 class VerifyEmailOtpRequest(BaseModel):

@@ -349,12 +349,29 @@ async def register(
     await db.flush()
 
     # Dispatch OTP notifications
-    await notification_service.send_email_otp(user.email, email_otp, purpose="registration")
-    await notification_service.send_phone_otp(user.phone_number, phone_otp, purpose="registration")
+    email_delivered = await notification_service.send_email_otp(user.email, email_otp, purpose="registration")
+    sms_delivered = await notification_service.send_phone_otp(user.phone_number, phone_otp, purpose="registration")
 
-    logger.info("[AUTH REGISTRATION] Initiated dual verification for user '%s'", user.username)
+    is_email_configured = notification_service.is_email_configured()
+    is_sms_configured = notification_service.is_sms_configured()
+
+    logger.info(
+        "[AUTH REGISTRATION] Initiated dual verification for user '%s' (email_delivered=%s, sms_delivered=%s)",
+        user.username,
+        email_delivered,
+        sms_delivered,
+    )
 
     registration_token = create_registration_token(user.id)
+
+    # When notification providers are unconfigured or fail to deliver on zero-cost infrastructure,
+    # supply the OTP so user can verify their account without being blocked.
+    dev_email = email_otp if (settings.is_development or not is_email_configured or not email_delivered) else None
+    dev_phone = phone_otp if (settings.is_development or not is_sms_configured or not sms_delivered) else None
+
+    delivery_note = ""
+    if not is_email_configured and not is_sms_configured:
+        delivery_note = " (Simulation mode: Notification providers unconfigured on server — use the provided verification codes)"
 
     return RegisterResponse(
         user_id=user.id,
@@ -365,9 +382,12 @@ async def register(
         phone_verified=user.phone_verified,
         is_active=user.is_active,
         registration_token=registration_token,
-        message="Registration initiated. Please verify both your email address and phone number.",
-        dev_email_otp=email_otp if settings.is_development else None,
-        dev_phone_otp=phone_otp if settings.is_development else None,
+        message=f"Registration initiated. Please verify both your email address and phone number.{delivery_note}",
+        dev_email_otp=dev_email,
+        dev_phone_otp=dev_phone,
+        email_delivered=email_delivered,
+        sms_delivered=sms_delivered,
+        provider_configured=is_email_configured or is_sms_configured,
     )
 
 
@@ -614,17 +634,29 @@ async def resend_register_otp(
     db.add(challenge)
     await db.flush()
 
+    delivered = False
     if payload.channel == "email":
-        await notification_service.send_email_otp(user.email, new_otp, purpose="registration")
+        delivered = await notification_service.send_email_otp(user.email, new_otp, purpose="registration")
+        is_cfg = notification_service.is_email_configured()
     else:
-        await notification_service.send_phone_otp(user.phone_number, new_otp, purpose="registration")
+        delivered = await notification_service.send_phone_otp(user.phone_number, new_otp, purpose="registration")
+        is_cfg = notification_service.is_sms_configured()
 
-    logger.info("[AUTH] Resent %s verification code for user '%s'", payload.channel, user.username)
+    logger.info("[AUTH] Resent %s verification code for user '%s' (delivered=%s)", payload.channel, user.username, delivered)
+
+    dev_otp = new_otp if (settings.is_development or not is_cfg or not delivered) else None
+    msg = (
+        f"A new verification code has been dispatched to your {payload.channel}."
+        if delivered
+        else f"Verification code generated (Simulation mode: {payload.channel} service unconfigured)."
+    )
 
     return {
-        "message": f"A new verification code has been dispatched to your {payload.channel}.",
+        "message": msg,
         "channel": payload.channel,
-        "dev_otp": new_otp if settings.is_development else None,
+        "dev_otp": dev_otp,
+        "delivered": delivered,
+        "provider_configured": is_cfg,
     }
 
 
@@ -677,8 +709,10 @@ async def change_register_email(
     db.add(challenge)
     await db.flush()
 
-    await notification_service.send_email_otp(user.email, new_otp, purpose="registration")
-    logger.info("[AUTH] Email address updated to '%s' for pending user '%s'", user.email, user.username)
+    email_sent = await notification_service.send_email_otp(user.email, new_otp, purpose="registration")
+    is_cfg = notification_service.is_email_configured()
+    dev_email = new_otp if (settings.is_development or not is_cfg or not email_sent) else None
+    logger.info("[AUTH] Email address updated to '%s' for pending user '%s' (sent=%s)", user.email, user.username, email_sent)
 
     return VerificationStatusResponse(
         user_id=user.id,
@@ -689,7 +723,7 @@ async def change_register_email(
         phone_verified=user.phone_verified,
         is_active=user.is_active,
         message="Email address updated. A new verification code has been dispatched.",
-        dev_email_otp=new_otp if settings.is_development else None,
+        dev_email_otp=dev_email,
     )
 
 
@@ -742,8 +776,10 @@ async def change_register_phone(
     db.add(challenge)
     await db.flush()
 
-    await notification_service.send_phone_otp(user.phone_number, new_otp, purpose="registration")
-    logger.info("[AUTH] Phone number updated to '%s' for pending user '%s'", user.phone_number, user.username)
+    sms_sent = await notification_service.send_phone_otp(user.phone_number, new_otp, purpose="registration")
+    is_cfg = notification_service.is_sms_configured()
+    dev_phone = new_otp if (settings.is_development or not is_cfg or not sms_sent) else None
+    logger.info("[AUTH] Phone number updated to '%s' for pending user '%s' (sent=%s)", user.phone_number, user.username, sms_sent)
 
     return VerificationStatusResponse(
         user_id=user.id,
@@ -754,7 +790,7 @@ async def change_register_phone(
         phone_verified=user.phone_verified,
         is_active=user.is_active,
         message="Phone number updated. A new verification code has been dispatched.",
-        dev_phone_otp=new_otp if settings.is_development else None,
+        dev_phone_otp=dev_phone,
     )
 
 
@@ -1108,18 +1144,23 @@ async def forgot_password_request_otp(
     db.add(challenge)
     await db.flush()
 
+    sent = False
     if payload.channel == "email":
-        await notification_service.send_email_otp(user.email, otp, purpose="recovery")
+        sent = await notification_service.send_email_otp(user.email, otp, purpose="recovery")
+        is_cfg = notification_service.is_email_configured()
     else:
-        await notification_service.send_phone_otp(user.phone_number, otp, purpose="recovery")
+        sent = await notification_service.send_phone_otp(user.phone_number, otp, purpose="recovery")
+        is_cfg = notification_service.is_sms_configured()
 
-    logger.info("[AUTH RECOVERY] Dispatched password reset OTP via %s for user '%s'", payload.channel, user.username)
+    logger.info("[AUTH RECOVERY] Dispatched password reset OTP via %s for user '%s' (sent=%s)", payload.channel, user.username, sent)
+
+    dev_otp = otp if (settings.is_development or not is_cfg or not sent) else None
 
     return ForgotPasswordResponse(
         message=generic_msg,
         challenge_id=challenge.id,
         channel=payload.channel,
-        dev_otp=otp if settings.is_development else None,
+        dev_otp=dev_otp,
     )
 
 

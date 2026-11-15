@@ -170,7 +170,17 @@ interface GameStore {
   practiceProgression: ProgressionState;
   hydrateProgression: (userId?: string | null) => ProgressionState;
   addRewards: (xp: number, coins: number) => void;
-  addPracticeRewards: (xp: number, coins: number) => void;
+  addPracticeRewards: (
+    xp: number,
+    coins: number,
+    matchDetails?: {
+      won: boolean;
+      role?: string;
+      was_impostor?: boolean;
+      guessed_word_correctly?: boolean;
+      difficulty?: string;
+    }
+  ) => void;
   syncAuthoritativeRewards: (newTotalXp: number, newTotalCoins: number, level?: number) => void;
   setProgression: (
     xp: number,
@@ -403,7 +413,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return { progression: prog };
     });
   },
-  addPracticeRewards: (earnedXp, earnedCoins) => {
+  addPracticeRewards: (earnedXp, earnedCoins, matchDetails) => {
     set((s) => {
       const current = s.practiceProgression || getStoredProgression(null);
       const xp = (current?.xp || 0) + earnedXp;
@@ -415,16 +425,41 @@ export const useGameStore = create<GameStore>((set, get) => ({
         coins,
         level,
       };
+
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem("catchme_practice_progression", JSON.stringify(prog));
         } catch {}
       }
+
       // If user is a guest, update their active displayed progression as well
       if (!s.user || s.user.is_guest) {
+        saveProgressionToStorage(prog, s.user?.id);
         return { practiceProgression: prog, progression: prog };
       }
-      // Authenticated users: practice rewards strictly DO NOT alter authenticated account progression!
+
+      // Authenticated users: persist authoritatively to backend so legitimate rewards update account progression
+      if (matchDetails) {
+        progressionApi.recordPracticeMatch(matchDetails).then((serverProg) => {
+          const authoritative: ProgressionState = {
+            ...(s.progression || getStoredProgression(s.user?.id)),
+            xp: serverProg.xp,
+            coins: serverProg.coins,
+            level: serverProg.level,
+            unlockedAvatars: serverProg.unlocked_avatars || s.progression?.unlockedAvatars,
+            equippedAvatar: serverProg.equipped_avatar || s.progression?.equippedAvatar,
+            unlockedItems: serverProg.unlocked_items || s.progression?.unlockedItems,
+            equippedFrame: serverProg.equipped_frame ?? s.progression?.equippedFrame,
+            equippedStamp: serverProg.equipped_stamp ?? s.progression?.equippedStamp,
+          };
+          saveProgressionToStorage(authoritative, s.user?.id);
+          set({ progression: authoritative });
+        }).catch((err) => {
+          console.warn("[Practice] Background sync failed, local state preserved:", err);
+        });
+      }
+
+      // Synchronously, authenticated account balance remains protected from arbitrary client injection (SEC-06)
       return { practiceProgression: prog };
     });
   },

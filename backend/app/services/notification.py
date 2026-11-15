@@ -96,8 +96,12 @@ class NotificationService:
             "Authorization": f"Bearer {settings.resend_api_key.strip()}",
             "Content-Type": "application/json",
         }
+        from_email = settings.smtp_from_email.strip() if settings.smtp_from_email else ""
+        if not from_email or "catchme.game" in from_email:
+            from_email = "onboarding@resend.dev"
+
         payload = {
-            "from": settings.smtp_from_email,
+            "from": from_email,
             "to": [to_email],
             "subject": subject,
             "text": text_content,

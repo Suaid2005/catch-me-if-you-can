@@ -231,7 +231,7 @@ async def _finalize_match_core(
                         break
 
             # If human player's assignment cannot be verified, exclude from rewards safely
-            if not assignment or not assignment.get("role") or not assignment.get("team"):
+            if not assignment or not assignment.get("role"):
                 logger.warning(
                     f"[Finalization] Unverified seat excluded from rewards: {player.get('username')} "
                     f"(key={stable_player_key}, sid={player.get('sid')}) in room {room_code}"
@@ -239,9 +239,18 @@ async def _finalize_match_core(
                 continue
 
             player_role = assignment["role"]
-            player_team = assignment["team"]
+            player_team = assignment.get("team")
             was_impostor = bool(assignment.get("is_impostor", False))
-            won = (player_team == winning_team)
+            
+            # Winner determination:
+            # - In team battle: match team against winner
+            # - In standard modes: impostors win if winner is "impostor", innocents win if winner is "innocents"
+            match_mode = match_state.get("mode", "classic")
+            if match_mode == "team_battle":
+                won = (player_team == winner)
+            else:
+                won = (was_impostor and winner == "impostor") or (not was_impostor and winner == "innocents")
+
             guessed_word = bool(guess_data and guess_data.get("is_correct") and was_impostor)
 
             reward = calculate_match_rewards(
@@ -264,6 +273,8 @@ async def _finalize_match_core(
                 "is_bot": False,
                 "xp_earned": reward["xp_earned"],
                 "coins_earned": reward["coins_earned"],
+                "won": won,
+                "was_impostor": was_impostor,
             })
 
         # Match validity check for persistence
@@ -319,6 +330,7 @@ async def _finalize_match_core(
                 "player_key": stable_player_key,
                 "current_sid": player.get("sid"),
                 "user_id": u_id,
+                "username": player.get("username"),
                 "new_total_xp": prog["xp"],
                 "new_total_coins": prog["coins"],
                 "level_info": lvl_info,

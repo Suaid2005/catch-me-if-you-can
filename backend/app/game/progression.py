@@ -193,10 +193,18 @@ async def apply_authoritative_rewards(
                         session.add(ledger_record)
                         await session.flush()
 
-                        # Authoritatively increment account balance
+                        # Authoritatively increment account balance & lifetime statistics
                         user.xp += xp_earned
                         user.coins += coins_earned
                         user.level = max(1, (user.xp // 250) + 1)
+                        user.games_played = (user.games_played or 0) + 1
+                        if p.get("won"):
+                            user.games_won = (user.games_won or 0) + 1
+                        if p.get("was_impostor"):
+                            if p.get("won"):
+                                user.times_escaped = (user.times_escaped or 0) + 1
+                            else:
+                                user.times_caught = (user.times_caught or 0) + 1
 
                         updated_users[user_id] = {
                             "user_id": user_id,
