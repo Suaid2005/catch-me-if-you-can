@@ -51,3 +51,26 @@ async def test_twilio_dispatch_fallback():
             call_kwargs = mock_client.post.call_args[1]
             assert call_kwargs["data"]["To"] == "+919876543210"
             assert "Agent007" in call_kwargs["data"]["Body"]
+
+
+
+@pytest.mark.asyncio
+async def test_phone_recovery_zero_cost_email_fallback(setup_db):
+    """Verifies that when SMS provider is unconfigured, phone recovery seamlessly uses email for ₹0."""
+    from app.services.notification import notification_service
+    with patch.object(notification_service, "is_sms_configured", return_value=False), \
+         patch.object(notification_service, "is_email_configured", return_value=True), \
+         patch.object(notification_service, "send_email_otp", new_callable=AsyncMock) as mock_send:
+        mock_send.return_value = True
+
+        from httpx import AsyncClient, ASGITransport
+        from app.main import app
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            res = await ac.post("/api/auth/forgot-password", json={
+                "channel": "phone",
+                "identifier": "+919876543210"
+            })
+            assert res.status_code == 200
+            data = res.json()
+            assert "dispatched" in data["message"].lower()

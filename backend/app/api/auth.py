@@ -1036,6 +1036,23 @@ async def logout(
 
 # ── Account Recovery Endpoints ─────────────────────────────────────
 
+def mask_email(email: str) -> str:
+    if not email or "@" not in email:
+        return "***"
+    local, domain = email.split("@", 1)
+    if len(local) <= 2:
+        masked_local = local[0] + "***"
+    else:
+        masked_local = local[0] + "***" + local[-1]
+    return f"{masked_local}@{domain}"
+
+
+def mask_phone(phone: str) -> str:
+    if not phone or len(phone) < 4:
+        return "***"
+    return phone[:3] + "******" + phone[-2:]
+
+
 @router.post("/recover-username", response_model=MessageResponse)
 async def recover_username(
     payload: RecoverUsernameRequest,
@@ -1049,11 +1066,13 @@ async def recover_username(
     client_ip = request.client.host if request.client else "unknown"
     _check_rate_limit(f"rec_usr_{client_ip}", max_requests=5, window_minutes=15)
 
-    is_cfg = notification_service.is_email_configured() if payload.channel == "email" else notification_service.is_sms_configured()
-    if not is_cfg and not settings.is_development:
-        provider_name = "Email (Resend/SMTP)" if payload.channel == "email" else "SMS (Fast2SMS/Twilio)"
+    is_email_cfg = notification_service.is_email_configured()
+    is_sms_cfg = notification_service.is_sms_configured()
+
+    # If neither email nor SMS is configured (and not in dev)
+    if not is_email_cfg and not is_sms_cfg and not settings.is_development:
         return MessageResponse(
-            message=f"Notice: {provider_name} dispatch service is not configured on this server. Please add your credentials in Render environment settings."
+            message="Notice: Notification dispatch service is not configured on this server. Please add your credentials in Render environment settings."
         )
 
     identifier = payload.identifier.strip()
@@ -1090,8 +1109,13 @@ async def recover_username(
         )
         user = result.scalar_one_or_none()
         if user and not user.is_guest:
-            await notification_service.send_username_sms(user.phone_number, user.username)
-            logger.info("[AUTH RECOVERY] Sent username recovery SMS for user '%s'", user.username)
+            if is_sms_cfg:
+                await notification_service.send_username_sms(user.phone_number, user.username)
+                logger.info("[AUTH RECOVERY] Sent username recovery SMS for user '%s'", user.username)
+            elif is_email_cfg:
+                # ₹0 cost fallback: deliver codename to registered email
+                await notification_service.send_username_recovery(user.email, user.username)
+                logger.info("[AUTH RECOVERY] Sent username recovery email fallback for phone user '%s'", user.username)
 
     return MessageResponse(message=generic_msg)
 
@@ -1163,7 +1187,13 @@ async def forgot_password_request_otp(
     )
 
     otp = generate_otp_code()
-    target = user.email if payload.channel == "email" else user.phone_number
+    is_email_cfg = notification_service.is_email_configured()
+    is_sms_cfg = notification_service.is_sms_configured()
+
+    # If user selected phone but SMS is unconfigured on zero-cost infrastructure,
+    # seamlessly fall back to the registered email linked to this phone account
+    use_email_fallback = (payload.channel == "phone" and not is_sms_cfg and is_email_cfg)
+    target = user.email if (payload.channel == "email" or use_email_fallback) else user.phone_number
 
     challenge = OtpChallenge(
         user_id=user.id,
@@ -1181,29 +1211,40 @@ async def forgot_password_request_otp(
     await db.flush()
 
     sent = False
+    target_masked = None
     if payload.channel == "email":
         sent = await notification_service.send_email_otp(user.email, otp, purpose="recovery")
-        is_cfg = notification_service.is_email_configured()
-    else:
+        is_cfg = is_email_cfg
+        target_masked = mask_email(user.email)
+    elif is_sms_cfg:
         sent = await notification_service.send_phone_otp(user.phone_number, otp, purpose="recovery")
-        is_cfg = notification_service.is_sms_configured()
+        is_cfg = True
+        target_masked = mask_phone(user.phone_number)
+    elif is_email_cfg:
+        # Zero-cost fallback: dispatch recovery code to email linked to this phone
+        sent = await notification_service.send_email_otp(user.email, otp, purpose="recovery")
+        is_cfg = True
+        target_masked = f"{mask_email(user.email)} (linked to this phone)"
+    else:
+        is_cfg = False
+        target_masked = mask_phone(user.phone_number)
 
-    logger.info("[AUTH RECOVERY] Dispatched password reset OTP via %s for user '%s' (sent=%s)", payload.channel, user.username, sent)
+    logger.info("[AUTH RECOVERY] Dispatched password reset OTP via %s for user '%s' (sent=%s, target=%s)", payload.channel, user.username, sent, target)
 
     dev_otp = otp if (settings.is_development or not is_cfg or not sent) else None
 
-    # If the provider is not configured on production infrastructure, inform the user honestly
+    # Only raise 503 if neither email nor SMS is available on the server
     if not is_cfg and not settings.is_development:
-        provider_name = "Email (Resend/SMTP)" if payload.channel == "email" else "SMS (Fast2SMS/Twilio)"
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"{provider_name} delivery service is not configured on this server. Please configure your credentials in Render environment settings."
+            detail="Notification delivery services are not configured on this server. Please configure your credentials in Render environment settings."
         )
 
     return ForgotPasswordResponse(
         message=generic_msg,
         challenge_id=challenge.id,
         channel=payload.channel,
+        target_masked=target_masked,
         dev_otp=dev_otp,
     )
 

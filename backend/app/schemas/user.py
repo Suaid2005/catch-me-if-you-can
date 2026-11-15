@@ -161,6 +161,7 @@ class ForgotPasswordResponse(BaseModel):
     message: str
     challenge_id: str | None = None
     channel: str
+    target_masked: str | None = None
     dev_otp: str | None = None
     reset_token: str | None = None
 
