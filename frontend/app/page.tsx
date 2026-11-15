@@ -474,12 +474,6 @@ export default function HomePage() {
         return;
       }
       const res = await authApi.forgotPassword({ channel: recoveryChannel, identifier });
-      if (res.reset_token) {
-        setResetToken(res.reset_token);
-        setRecoverySuccessMsg("Identity verified! Please set your new password.");
-        setAuthMode("reset_password");
-        return;
-      }
       setRecoveryChallengeId(res.challenge_id);
       setRecoveryTargetMasked(res.target_masked);
       setRecoverySuccessMsg(res.message);

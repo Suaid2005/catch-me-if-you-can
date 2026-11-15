@@ -1171,30 +1171,11 @@ async def forgot_password_request_otp(
 
     dev_otp = otp if (settings.is_development or not is_cfg or not sent) else None
 
-    # In production on zero-cost infrastructure where notification providers are unconfigured or fail to deliver,
-    # generate a single-use password reset token immediately so the verified user can set a new password
-    # without blocked OTP screens or leaking dev codes.
-    reset_token_val = None
-    if (not is_cfg or not sent) and not settings.is_development:
-        raw_reset_token = secrets.token_urlsafe(32)
-        token_hash = hashlib.sha256(raw_reset_token.encode("utf-8")).hexdigest()
-        reset_record = PasswordResetToken(
-            user_id=user.id,
-            token_hash=token_hash,
-            expires_at=now + timedelta(minutes=15),
-            used=False,
-        )
-        db.add(reset_record)
-        await db.flush()
-        reset_token_val = raw_reset_token
-        generic_msg = "Account verified! You may now set your new password."
-
     return ForgotPasswordResponse(
         message=generic_msg,
         challenge_id=challenge.id,
         channel=payload.channel,
         dev_otp=dev_otp,
-        reset_token=reset_token_val,
     )
 
 
