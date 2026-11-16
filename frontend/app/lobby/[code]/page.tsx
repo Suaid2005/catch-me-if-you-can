@@ -59,6 +59,7 @@ export default function LobbyRoomPage() {
   const [clueRounds, setClueRounds] = useState(2);
   const [enableChaos, setEnableChaos] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [copiedType, setCopiedType] = useState<"code" | "link" | null>(null);
 
   const setupSocket = useCallback(() => {
     if (!user || !code) return;
@@ -180,7 +181,7 @@ export default function LobbyRoomPage() {
               <span>🕵️</span> Online Match Lobby
             </h1>
             <p className="text-gray-400 text-xs">Share room code to invite teammates:</p>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex flex-wrap items-center gap-2 mt-1">
               <span className="text-3xl font-black text-game-accent tracking-widest font-mono">
                 {code}
               </span>
@@ -188,11 +189,26 @@ export default function LobbyRoomPage() {
                 onClick={() => {
                   sound.playClick();
                   navigator.clipboard.writeText(code || "");
+                  setCopiedType("code");
+                  setTimeout(() => setCopiedType(null), 2000);
                 }}
-                className="text-xs text-gray-400 hover:text-white border border-gray-700
-                           rounded px-2.5 py-1 transition-colors bg-game-card hover:bg-gray-800"
+                className="text-xs text-gray-300 hover:text-white border border-gray-700
+                           rounded px-2.5 py-1 transition-colors bg-game-card hover:bg-gray-800 font-semibold"
               >
-                📋 Copy
+                {copiedType === "code" ? "✓ Copied Code!" : "📋 Copy Code"}
+              </button>
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  const origin = typeof window !== "undefined" ? window.location.origin : "https://catch-me-if-you-can-red.vercel.app";
+                  navigator.clipboard.writeText(`${origin}/lobby/${code}`);
+                  setCopiedType("link");
+                  setTimeout(() => setCopiedType(null), 2000);
+                }}
+                className="text-xs text-cyan-300 hover:text-white border border-cyan-700/60
+                           rounded px-2.5 py-1 transition-colors bg-cyan-950/40 hover:bg-cyan-900/60 font-semibold"
+              >
+                {copiedType === "link" ? "✓ Copied Link!" : "🔗 Share Link"}
               </button>
             </div>
           </div>

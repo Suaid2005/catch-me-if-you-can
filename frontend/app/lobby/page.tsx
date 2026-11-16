@@ -71,8 +71,17 @@ export default function OnlineMultiplayerEntryPage() {
 
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault();
-    const code = roomCode.trim().toUpperCase();
-    if (!code) {
+    let code = roomCode.trim();
+    // Support pasting full lobby URLs or raw codes with spaces/hyphens
+    const urlMatch = code.match(/\/lobby\/([A-Za-z0-9]{6})/i);
+    if (urlMatch) {
+      code = urlMatch[1];
+    } else {
+      code = code.replace(/[^A-Za-z0-9]/g, "");
+    }
+    code = code.toUpperCase();
+
+    if (!code || code.length !== 6) {
       setError("Please enter a valid 6-letter room code");
       return;
     }
@@ -229,9 +238,17 @@ export default function OnlineMultiplayerEntryPage() {
                   required
                   placeholder="e.g. S6ZR6H"
                   value={roomCode}
-                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const urlMatch = raw.match(/\/lobby\/([A-Za-z0-9]{6})/i);
+                    if (urlMatch) {
+                      setRoomCode(urlMatch[1].toUpperCase());
+                    } else {
+                      setRoomCode(raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 6));
+                    }
+                  }}
                   className="w-full text-center tracking-widest text-2xl font-mono uppercase bg-slate-900 border border-cyan-500/40 rounded-xl px-4 py-3 text-cyan-300 placeholder-gray-600 focus:outline-none focus:border-cyan-400 font-black"
-                  maxLength={6}
+                  maxLength={64}
                 />
               </div>
 

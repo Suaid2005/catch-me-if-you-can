@@ -13,6 +13,7 @@ from typing import Optional, Dict, Any, List
 from sqlalchemy import select, update
 from app.database import AsyncSessionLocal
 from app.models.match_state import MatchStateModel
+from app.game.code_utils import get_code_candidates
 
 logger = logging.getLogger(__name__)
 
@@ -160,11 +161,16 @@ class MatchPersistence:
         Returns a dict containing 'room_data' and 'match_state' or None.
         """
         code = room_code.upper().strip()
+        candidates = get_code_candidates(code)
         try:
             async with AsyncSessionLocal() as session:
-                stmt = select(MatchStateModel).where(MatchStateModel.room_code == code)
-                result = await session.execute(stmt)
-                record = result.scalar_one_or_none()
+                record = None
+                for cand in candidates:
+                    stmt = select(MatchStateModel).where(MatchStateModel.room_code == cand)
+                    result = await session.execute(stmt)
+                    record = result.scalar_one_or_none()
+                    if record:
+                        break
 
                 if not record:
                     return None

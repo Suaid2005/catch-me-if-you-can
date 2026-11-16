@@ -16,6 +16,8 @@ import time
 import asyncio
 from typing import Optional, Callable, Awaitable
 
+from app.game.code_utils import generate_unambiguous_code, get_code_candidates
+
 logger = logging.getLogger(__name__)
 
 
@@ -59,9 +61,9 @@ class RoomManager:
         return code
 
     def _generate_code(self) -> str:
-        """Generate a unique 6-character alphanumeric room code."""
+        """Generate a unique 6-character alphanumeric room code without ambiguous characters."""
         while True:
-            code = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            code = generate_unambiguous_code(6)
             if code not in self._rooms:
                 return code
 
@@ -82,6 +84,13 @@ class RoomManager:
         Returns True on success, False if the room is full or not found.
         """
         code = room_code.upper().strip()
+        # Resolve to existing canonical room if caller used an ambiguous variant
+        if code not in self._rooms:
+            for cand in get_code_candidates(code):
+                if cand in self._rooms:
+                    code = cand
+                    break
+
         if code not in self._rooms:
             # If room was created externally without room_manager sync, initialize it
             self.create_room(host_sid=sid, max_players=8, room_code=code)
@@ -308,9 +317,10 @@ class RoomManager:
 
     def get_players(self, room_code: str) -> list[dict]:
         """Return a list of all players in a room (safe to send to clients)."""
-        if room_code not in self._rooms:
+        room = self.get_room(room_code)
+        if not room:
             return []
-        return list(self._rooms[room_code]["players"].values())
+        return list(room["players"].values())
 
     def get_player(self, sid: str) -> Optional[dict]:
         """Return the player dict for a given socket ID."""
@@ -318,11 +328,12 @@ class RoomManager:
         player_key = self._socket_to_player_key.get(sid)
         if not room_code or not player_key:
             return None
-        return self._rooms.get(room_code, {}).get("players", {}).get(player_key)
+        room = self.get_room(room_code)
+        return room.get("players", {}).get(player_key) if room else None
 
     def is_host(self, sid: str, room_code: str) -> bool:
         """Check if the given socket is the room host."""
-        room = self._rooms.get(room_code)
+        room = self.get_room(room_code)
         if not room:
             return False
         if room.get("host_sid") == sid:
@@ -337,11 +348,22 @@ class RoomManager:
         if player:
             player["is_ready"] = is_ready
 
+    def get_canonical_code(self, room_code: str) -> Optional[str]:
+        """Return the exact room code stored in memory, resolving any ambiguous variants."""
+        clean = room_code.upper().strip()
+        if clean in self._rooms:
+            return clean
+        for cand in get_code_candidates(clean):
+            if cand in self._rooms:
+                return cand
+        return None
+
     def room_exists(self, room_code: str) -> bool:
-        return room_code in self._rooms
+        return self.get_canonical_code(room_code) is not None
 
     def get_room(self, room_code: str) -> Optional[dict]:
-        return self._rooms.get(room_code)
+        canonical = self.get_canonical_code(room_code)
+        return self._rooms.get(canonical) if canonical else None
 
 
 # Singleton instance — imported and used everywhere in the socket layer
