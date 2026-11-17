@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useGameStore } from "@/lib/store";
-import { authApi, roomApi, ApiError } from "@/lib/api";
+import { authApi, roomApi, ApiError, getToken } from "@/lib/api";
 import { sound } from "@/lib/sound";
 import SettingsModal from "@/components/ui/SettingsModal";
 import GameHeader from "@/components/ui/GameHeader";
@@ -158,9 +158,10 @@ export default function HomePage() {
 
   // Ensure user is authenticated (as guest or existing member) before creating/joining
   const ensureUserSession = async (): Promise<boolean> => {
-    if (user) return true;
+    const token = getToken();
+    if (user && token) return true;
     try {
-      const name = displayName.trim() || `Agent_${Math.floor(1000 + Math.random() * 9000)}`;
+      const name = displayName.trim() || user?.username || `Agent_${Math.floor(1000 + Math.random() * 9000)}`;
       const res = await authApi.guest(name);
       setAuth(res.user, res.access_token, res.refresh_token);
       return true;
@@ -179,7 +180,19 @@ export default function HomePage() {
       const ok = await ensureUserSession();
       if (!ok) return;
 
-      const room = await roomApi.create({ max_players: 8, allow_bots: true });
+      let room;
+      try {
+        room = await roomApi.create({ max_players: 8, allow_bots: true });
+      } catch (createErr: any) {
+        if (createErr?.status === 401 || createErr?.message?.toLowerCase().includes("authenticated")) {
+          const name = displayName.trim() || user?.username || `Agent_${Math.floor(1000 + Math.random() * 9000)}`;
+          const res = await authApi.guest(name);
+          setAuth(res.user, res.access_token, res.refresh_token);
+          room = await roomApi.create({ max_players: 8, allow_bots: true });
+        } else {
+          throw createErr;
+        }
+      }
       setRoom(room);
       sound.playVictory();
       router.push(`/lobby/${room.code}`);
@@ -213,10 +226,22 @@ export default function HomePage() {
       const ok = await ensureUserSession();
       if (!ok) return;
 
-      const { room } = await roomApi.join(code);
-      setRoom(room);
+      let joinRes;
+      try {
+        joinRes = await roomApi.join(code);
+      } catch (joinErr: any) {
+        if (joinErr?.status === 401 || joinErr?.message?.toLowerCase().includes("authenticated")) {
+          const name = displayName.trim() || user?.username || `Agent_${Math.floor(1000 + Math.random() * 9000)}`;
+          const res = await authApi.guest(name);
+          setAuth(res.user, res.access_token, res.refresh_token);
+          joinRes = await roomApi.join(code);
+        } else {
+          throw joinErr;
+        }
+      }
+      setRoom(joinRes.room);
       sound.playVictory();
-      router.push(`/lobby/${room.code}`);
+      router.push(`/lobby/${joinRes.room.code}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Room not found or match already started");
     } finally {

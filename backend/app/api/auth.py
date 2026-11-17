@@ -23,6 +23,7 @@ import uuid
 import secrets
 import hashlib
 import logging
+from typing import Optional
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
@@ -69,6 +70,7 @@ router = APIRouter()
 settings = get_settings()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 ALGORITHM = "HS256"
 
@@ -225,6 +227,27 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+async def get_optional_current_user(
+    token: Optional[str] = Depends(oauth2_scheme_optional),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[User]:
+    """
+    Returns the authenticated User if a valid Bearer token is provided.
+    Returns None if token is absent, expired, or invalid — without raising 401.
+    """
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+        user_id: str | None = payload.get("sub")
+        if not user_id:
+            return None
+        result = await db.execute(select(User).where(User.id == user_id))
+        return result.scalar_one_or_none()
+    except Exception:
+        return None
 
 
 # ── Dual OTP Registration Endpoints ───────────────────────────────

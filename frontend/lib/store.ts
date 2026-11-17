@@ -301,7 +301,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
           return refreshedUser;
         } catch (err: any) {
           const msg = err?.message || "";
-          if (msg.includes("401") || msg.includes("Could not validate credentials") || msg.includes("Unauthorized")) {
+          if (
+            err?.status === 401 ||
+            msg.includes("401") ||
+            msg.toLowerCase().includes("not authenticated") ||
+            msg.includes("Could not validate credentials") ||
+            msg.includes("Unauthorized")
+          ) {
             clearToken();
             const guestProg = getStoredProgression(null);
             set({ user: null, token: null, progression: guestProg, isHydrated: true });

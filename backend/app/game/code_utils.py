@@ -60,3 +60,4 @@ def get_code_candidates(code: str, max_candidates: int = 32) -> List[str]:
                 break
 
     return candidates[:max_candidates]
+

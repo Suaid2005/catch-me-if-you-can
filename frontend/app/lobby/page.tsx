@@ -2,7 +2,7 @@
  * app/lobby/page.tsx
  * ───────────────────
  * Online Multiplayer Entry Screen.
- *
+ * 
  * Features:
  * - Two large gaming options: CREATE ROOM and JOIN ROOM.
  * - Player avatar selection & display name input.
@@ -14,7 +14,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGameStore } from "@/lib/store";
-import { authApi, roomApi } from "@/lib/api";
+import { authApi, roomApi, getToken } from "@/lib/api";
 import { sound } from "@/lib/sound";
 
 const AVATARS = ["🕵️", "🦹", "🤖", "🦊", "🎭", "🕶️", "👩‍🔬", "🧙", "⚡", "👾"];
@@ -37,11 +37,12 @@ export default function OnlineMultiplayerEntryPage() {
   }, [user, displayName]);
 
   const ensureSession = async (): Promise<boolean> => {
-    if (user) return true;
+    const token = getToken();
+    if (user && token) return true;
     try {
-      const name = displayName.trim() || `Agent_${Math.floor(1000 + Math.random() * 9000)}`;
+      const name = displayName.trim() || user?.username || `Agent_${Math.floor(1000 + Math.random() * 9000)}`;
       const res = await authApi.guest(name);
-      setAuth(res.user, res.access_token);
+      setAuth(res.user, res.access_token, res.refresh_token);
       return true;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to establish player session");
@@ -58,7 +59,19 @@ export default function OnlineMultiplayerEntryPage() {
       const ok = await ensureSession();
       if (!ok) return;
 
-      const room = await roomApi.create({ max_players: 8, allow_bots: true });
+      let room;
+      try {
+        room = await roomApi.create({ max_players: 8, allow_bots: true });
+      } catch (createErr: any) {
+        if (createErr?.status === 401 || createErr?.message?.toLowerCase().includes("authenticated")) {
+          const name = displayName.trim() || user?.username || `Agent_${Math.floor(1000 + Math.random() * 9000)}`;
+          const res = await authApi.guest(name);
+          setAuth(res.user, res.access_token, res.refresh_token);
+          room = await roomApi.create({ max_players: 8, allow_bots: true });
+        } else {
+          throw createErr;
+        }
+      }
       setRoom(room);
       sound.playVictory();
       router.push(`/lobby/${room.code}`);
@@ -92,10 +105,22 @@ export default function OnlineMultiplayerEntryPage() {
       const ok = await ensureSession();
       if (!ok) return;
 
-      const { room } = await roomApi.join(code);
-      setRoom(room);
+      let joinRes;
+      try {
+        joinRes = await roomApi.join(code);
+      } catch (joinErr: any) {
+        if (joinErr?.status === 401 || joinErr?.message?.toLowerCase().includes("authenticated")) {
+          const name = displayName.trim() || user?.username || `Agent_${Math.floor(1000 + Math.random() * 9000)}`;
+          const res = await authApi.guest(name);
+          setAuth(res.user, res.access_token, res.refresh_token);
+          joinRes = await roomApi.join(code);
+        } else {
+          throw joinErr;
+        }
+      }
+      setRoom(joinRes.room);
       sound.playVictory();
-      router.push(`/lobby/${room.code}`);
+      router.push(`/lobby/${joinRes.room.code}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Room not found or game already started");
     } finally {
@@ -152,22 +177,20 @@ export default function OnlineMultiplayerEntryPage() {
             <button
               type="button"
               onClick={() => { sound.playClick(); setActiveTab("create"); setError(""); }}
-              className={`py-3 rounded-xl font-black text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2 ${
-                activeTab === "create"
-                  ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-600/30"
-                  : "text-gray-400 hover:text-gray-200"
-              }`}
+              className={`py-3 rounded-xl font-black text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2 ${activeTab === "create"
+                ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-600/30"
+                : "text-gray-400 hover:text-gray-200"
+                }`}
             >
               <span>👑</span> Create Room
             </button>
             <button
               type="button"
               onClick={() => { sound.playClick(); setActiveTab("join"); setError(""); }}
-              className={`py-3 rounded-xl font-black text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2 ${
-                activeTab === "join"
-                  ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30"
-                  : "text-gray-400 hover:text-gray-200"
-              }`}
+              className={`py-3 rounded-xl font-black text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2 ${activeTab === "join"
+                ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30"
+                : "text-gray-400 hover:text-gray-200"
+                }`}
             >
               <span>🚀</span> Join Room
             </button>
@@ -186,11 +209,10 @@ export default function OnlineMultiplayerEntryPage() {
                       key={av}
                       type="button"
                       onClick={() => { sound.playClick(); setSelectedAvatar(av); }}
-                      className={`text-2xl p-2.5 rounded-xl border transition-all ${
-                        selectedAvatar === av
-                          ? "border-purple-500 bg-purple-950/80 scale-105 shadow-md shadow-purple-500/30"
-                          : "border-gray-800 bg-slate-900/60 hover:border-gray-700"
-                      }`}
+                      className={`text-2xl p-2.5 rounded-xl border transition-all ${selectedAvatar === av
+                        ? "border-purple-500 bg-purple-950/80 scale-105 shadow-md shadow-purple-500/30"
+                        : "border-gray-800 bg-slate-900/60 hover:border-gray-700"
+                        }`}
                     >
                       {av}
                     </button>

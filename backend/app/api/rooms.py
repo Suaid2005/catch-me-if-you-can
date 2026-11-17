@@ -8,6 +8,7 @@ Room management endpoints:
 """
 import random
 import string
+import uuid
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +19,7 @@ from app.database import get_db
 from app.models.room import Room, RoomStatus
 from app.models.user import User
 from app.schemas.room import RoomCreate, RoomJoin, RoomPublic, RoomJoinResponse
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, get_optional_current_user
 from app.game.room_manager import room_manager
 from app.game.code_utils import generate_unambiguous_code, get_code_candidates
 
@@ -116,7 +117,7 @@ async def find_room_by_code(
 @router.post("/create", response_model=RoomPublic, status_code=status.HTTP_201_CREATED)
 async def create_room(
     payload: RoomCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -128,9 +129,10 @@ async def create_room(
     while (await db.execute(select(Room).where(Room.code == code))).scalar_one_or_none():
         code = _generate_room_code()
 
+    host_id = current_user.id if current_user else str(uuid.uuid4())
     room = Room(
         code=code,
-        host_id=current_user.id,
+        host_id=host_id,
         max_players=payload.max_players,
         allow_bots=payload.allow_bots,
         min_players_to_start=payload.min_players_to_start,
@@ -152,7 +154,7 @@ async def create_room(
 @router.post("/join", response_model=RoomJoinResponse)
 async def join_room(
     payload: RoomJoin,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -160,14 +162,15 @@ async def join_room(
     Validates the code across all memory and DB persistence layers.
     Checks capacity, reconnection status, and returns canonical room metadata.
     """
-    room = await find_room_by_code(payload.code, db, current_user_id=current_user.id)
+    current_user_id = current_user.id if current_user else None
+    room = await find_room_by_code(payload.code, db, current_user_id=current_user_id)
 
     if not room:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
 
     # Allow seamless reconnection if player is already seated in this room
     is_existing_player = False
-    if room_manager.room_exists(room.code):
+    if current_user and room_manager.room_exists(room.code):
         players = room_manager.get_players(room.code)
         if any(p.get("user_id") == current_user.id for p in players):
             is_existing_player = True
